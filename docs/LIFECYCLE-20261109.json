@@ -1,0 +1,115 @@
+{
+  "date": "2026-11-09",
+  "kind": "Bounded local ordinary-input two-client lifecycle; not classroom or hosted acceptance",
+  "sourcePublicationCommit": "3290ff7ed4989f1e1c33cb53675e4dba139726e0",
+  "runtimeBaseline": "e83cc89fa8f8803957f7e6d4f869e1e54fbcac8c",
+  "authorityLineage": "00c832da029bd46ca8bce4db3b56c4d6bca7cd13",
+  "engine": "4.8.beta2.official.cafc17a19",
+  "renderer": "Compatibility, WebGL2, single-threaded",
+  "pckSha256": "2004736bee4f14a4cd93aee6b1ae0f2de66435ba79c91883d664b4fd62145034",
+  "wasmSha256": "17925d15afc88cdede21f09699dae9cf47a075e1b914877e0439b51278e9675d",
+  "firstHostConsoleUtc": "2026-11-09T09:42:33.291Z",
+  "lastObservedStateUtc": "2026-11-09T10:19:26.673Z",
+  "checks": [
+    {
+      "id": "two_clients",
+      "result": "PASS",
+      "evidence": "Two ordinary Chrome tabs created/joined the same anonymous room, both Ready, host Start."
+    },
+    {
+      "id": "drive_aim_fire",
+      "result": "PASS",
+      "evidence": "Ordinary keyboard/mouse input drove and aimed both tanks. No game-state or WebSocket injection."
+    },
+    {
+      "id": "damage_reload",
+      "result": "PASS",
+      "evidence": "First-round p2 health 3 to 2 to 1 to 0; early refire left shot/health unchanged during reload."
+    },
+    {
+      "id": "death_respawn",
+      "result": "PASS",
+      "evidence": "p2 death with 4.5667 seconds remaining, then health 3 at respawn."
+    },
+    {
+      "id": "same_page_rejoin",
+      "result": "PASS",
+      "evidence": "Rejoin seat visibly disconnected/recovered, returned p1 to the same active match and position."
+    },
+    {
+      "id": "capture_win",
+      "result": "PASS",
+      "evidence": "Ordinary route captured all seven bases, including red-owned East Orchard; both clients reported blue winner and displayed Blue 7 / Red 0."
+    },
+    {
+      "id": "rematch_reset",
+      "result": "PASS",
+      "evidence": "Host Rematch reset winner, all bases and readiness. Both clients displayed Waiting for battle and Hulls spawn at battle start, not destroyed/zero-hull combat HUD."
+    },
+    {
+      "id": "second_round",
+      "result": "PASS",
+      "evidence": "Both marked Ready again, host started, both spawned with health 3 and drove to the bridge. Guest shot id 5 hit p1; both clients observed p1 health 2."
+    },
+    {
+      "id": "console",
+      "result": "PASS",
+      "evidence": "Five captured log entries per client, all log level; no captured warning/error. Startup scene/effect draw verification succeeded on both."
+    },
+    {
+      "id": "cleanup",
+      "result": "PASS",
+      "evidence": "Closed only the two test tabs. Owned Node process exited; bounded GET to its IPv4-loopback endpoint was actively refused."
+    }
+  ],
+  "limitations": [
+    "Read-only WebSocket observation had buffer eviction across some gaps; this is not a continuous packet recording.",
+    "Screenshots are selected state captures, not continuous video.",
+    "One operator controlled two real browser clients on one desktop. No independent human, school-device, 4v4, latency or sustained-frame-time acceptance.",
+    "Same-page Rejoin was tested; refresh recovery and actual provider restart were not.",
+    "Portrait barrel framing, camera collision and busy-effect performance remain untested in this run.",
+    "No hosted service, deployment or access change."
+  ],
+  "screenshots": [
+    {
+      "file": "docs/images/lifecycle-20261109/03-death.jpg",
+      "bytes": 77285,
+      "sha256": "3cd5b1e0b15e14f6940387b672fcfb44d0a51545918ab16f4d772fe35f89451f"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/04-rejoined.jpg",
+      "bytes": 114210,
+      "sha256": "723362de2c91b54981416aedae833c1bfecf3d3e6667808b35ae866d05b4b2e2"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/05-win-host.jpg",
+      "bytes": 118426,
+      "sha256": "c6359b34d0c0a59d5d3e26b8a4972edd52d8aab5118f3bc66e6f9199cdc44490"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/06-win-guest.jpg",
+      "bytes": 115335,
+      "sha256": "ea2394762d208fe88840aba67a327152004e70fa2222b04c1056c92a962e80e9"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/07-rematch-host.jpg",
+      "bytes": 106454,
+      "sha256": "f9004c58115c01d3835afe204baf485d959a6d7c41ba9ef907993b070d085704"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/08-rematch-guest.jpg",
+      "bytes": 104121,
+      "sha256": "d981f8d72386a8a3f08397efc1d244c0c8ca553f8fb45d5ed635793d57693a27"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/09-second-start.jpg",
+      "bytes": 80764,
+      "sha256": "498027e753685b01d5c083e63ed119a1a4a41582c3729a302221df11da1d4cb2"
+    },
+    {
+      "file": "docs/images/lifecycle-20261109/10-second-damage.jpg",
+      "bytes": 92100,
+      "sha256": "e28cabe9eabf8597aa5c901996ff1b139015bc5b2f2d8dab38ab0f5c86bae86f"
+    }
+  ]
+}

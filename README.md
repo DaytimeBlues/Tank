@@ -6,6 +6,8 @@ A browser-oriented, one-player-per-tank, seven-base team battle. Godot handles t
 
 ![Kestrel original tank, historical native rendering fixture](docs/images/kestrel-model.png)
 
+Future development uses the verified GitHub-backed clone on `dev/student-pilot-20261109`; frozen recovery trees remain unchanged. The latest checkpoint adds evidence and reconciled requirements, not a new runtime export.
+
 ## Included
 
 - Godot scenes, GDScript, map data, shader and four original runtime GLBs.
@@ -41,4 +43,4 @@ W/S drive, A/D turn, pointer/arrows aim, Space/world click fire, M map, Escape/M
 
 ![Historical predecessor: all seven bases captured](docs/images/historical-match-win.png)
 
-This screenshot is from predecessor `db26d685`, not a complete-match acceptance receipt for the current e83 snapshot. A reachable protected pilot, full exact-build lifecycle and school-device performance still require testing.
+This screenshot is from predecessor `db26d685`, not a complete-match acceptance receipt for the current e83 snapshot. The exact e83 local lifecycle now passes in [the current receipt](docs/LIFECYCLE-20261109.json). A reachable protected pilot and school-device performance still require testing.

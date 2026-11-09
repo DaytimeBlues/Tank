@@ -5,7 +5,6 @@
   "unchangedFiles": {
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     ".gitignore": "be645521a5b0652af1e6db8d5f696d50569d4a3a9296f82cdc64ae2504257d01",
-    "PRD.md": "cc09489485773d9b1306998e728f35984ad0977b57cc429557c1e4c6ba716196",
     "art/.gdignore": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "art/models/baseline/bastion.glb": "b448b96fb15276f661edbc5cf4aadeec5532ca0cf7e59248c34feafbf0d0c798",
     "art/models/baseline/foundry.glb": "42f395aa3b57564610441b5b324338ce6b3c3707a6f4864422ae8a0ef11e3cd8",
@@ -152,5 +151,12 @@
     "tools/browser-warmup-integration-attempt-4.mjs",
     "tools/network-smoke.mjs",
     "tools/ordinary-rematch-second-round.mjs"
-  ]
+  ],
+  "evolvedDocumentation": {
+    "PRD.md": {
+      "baselineSha256": "cc09489485773d9b1306998e728f35984ad0977b57cc429557c1e4c6ba716196",
+      "currentSha256": "6bc9f5920afa37e8391748095ffe82fdda9f9cea396c97b066e22df05f19335d",
+      "reason": "Preserved original text; appended dated roadmap/reference/research reconciliation."
+    }
+  }
 }

@@ -13,7 +13,7 @@ After import using the matching Godot version:
 
 Godot executable names vary by installation. The backend's legacy npm lint/test scripts reference files not included in this preserved bridge subset; they are not represented as passing aggregate checks. There is no backend typecheck script. Do not install extra tools merely to hide a missing check.
 
-A real browser match must still cover create/join, balance, both-ready/start, drive/aim/fire, accepted damage/reload, death/respawn, capture/win, rejoin, rematch and second round, with error checks and secure cleanup. Native fixtures do not replace ordinary input.
+The 9 November bounded ordinary local run now covers the following journey; see LIFECYCLE-20261109.json for precise passes and limits. Future runtime changes must repeat affected coverage: create/join, balance, both-ready/start, drive/aim/fire, accepted damage/reload, death/respawn, capture/win, rejoin, rematch and second round, with error checks and secure cleanup. Native fixtures do not replace ordinary input.
 
 ## Publication safety
 
