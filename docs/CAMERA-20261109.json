@@ -1,0 +1,55 @@
+{
+  "kind": "Bounded camera candidate acceptance, not complete-match replacement",
+  "parentCommit": "1bf63699d7ee745418e4de5594b0b93b5a0a0313",
+  "branch": "fix/narrow-camera-20261109",
+  "engine": "4.8.beta2.official.cafc17a19",
+  "mainSha256": "a525f79fc116240b4e45e5075caa987c9ffa1339586ab43ed21d113e0cc33ab4",
+  "projectionTestSha256": "32aae61d962337e272440c074dc16a0572590257e7568b3408641fd8e2adc3b3",
+  "pckSha256": "5cbab4ca1a407bba709f4352030e50adad4d4e0961fc151ca36ab4d1eedd546c",
+  "wasmSha256": "17925d15afc88cdede21f09699dae9cf47a075e1b914877e0439b51278e9675d",
+  "checks": {
+    "import": "PASS",
+    "sceneSmoke": 54,
+    "typedWireChecks": 212,
+    "projectionRows": 16,
+    "ordinaryTwoClientJoinReadyStart": "PASS",
+    "narrow320x900DriveAndSteer": "PASS",
+    "narrowPointerHit": "PASS: accepted shot 2 hit p2, health 3 to 2 on both clients",
+    "samePageRejoin": "PASS: same p1, both connected, health retained",
+    "sideCannonVisible": "PASS: actual 320x900 side-aim screenshot",
+    "wideViewportRestore": "PASS: 1449x1232, override cleared",
+    "console": "Five captured log-level entries each; no warnings/errors",
+    "cleanup": "Two owned tabs closed, owned process exited, loopback port 5282 refused",
+    "independentReview": "PASS: source, 132 unchanged hashes, actual images, matching 4.8-beta2 headless import and 16-row projection rerun; no browser replay"
+  },
+  "endUtc": "2026-11-09T10:44:58.517Z",
+  "limits": [
+    "Baseline full match/rematch receipt remains exact e83; candidate full lifecycle was not repeated.",
+    "Projection stress fixture is conservative AABB and fixed +12 degree pitch/roll, not dynamic occlusion or full physical contact.",
+    "First rapid aim-and-fire missed; after observed settled aim, the next shot hit. No responsiveness/performance guarantee.",
+    "One operator controlled two browser clients; no school-device, 4v4, mobile-touch or hosted acceptance.",
+    "Independent source/evidence review passed; adoption and broader runtime acceptance remain pending."
+  ],
+  "images": [
+    {
+      "file": "docs/images/camera-20261109/narrow-hit.jpg",
+      "sha256": "5900e82d893341eb4794da0e94c9b48227ec010ef7f73188f430077d7456135d",
+      "bytes": 27245
+    },
+    {
+      "file": "docs/images/camera-20261109/narrow-rejoin.jpg",
+      "sha256": "118c31521a6076e718c1ef0afc06b453272c37ab60a4941a67dee57f25f2c3df",
+      "bytes": 32674
+    },
+    {
+      "file": "docs/images/camera-20261109/narrow-side.jpg",
+      "sha256": "ea7ced8bfb117b2135b1351706cdfd86ba1be1c14a5608fc222bea47c78fb9a6",
+      "bytes": 26940
+    },
+    {
+      "file": "docs/images/camera-20261109/wide-restored.jpg",
+      "sha256": "c55fecb5390dc517be54df62069d674aab5516ee8b5ab997a768f2bdeb91e074",
+      "bytes": 73963
+    }
+  ]
+}

@@ -2,11 +2,13 @@
 
 A browser-oriented, one-player-per-tank, seven-base team battle. Godot handles the scene, four original tank models, controls and room UI. Node/Rapier is the authoritative multiplayer server.
 
-**Current source:** a curated snapshot of `e83cc89fa8f8803957f7e6d4f869e1e54fbcac8c`, 9 November 2026. This repository is source and documentation, **not a hosted student game**. Class/heat experiments are not included. See [current status](docs/CURRENT-STATUS.md) for the exact evidence limits.
+**Branch candidate:** aspect-aware narrow camera, not yet adopted. See [candidate checks](docs/CAMERA-20261109.json). The accepted e83 full-match checkpoint remains separate.
+
+**Baseline source:** a curated snapshot of `e83cc89fa8f8803957f7e6d4f869e1e54fbcac8c`, 9 November 2026. This repository is source and documentation, **not a hosted student game**. Class/heat experiments are not included. See [current status](docs/CURRENT-STATUS.md) for the exact evidence limits.
 
 ![Kestrel original tank, historical native rendering fixture](docs/images/kestrel-model.png)
 
-Future development uses the verified GitHub-backed clone on `dev/student-pilot-20261109`; frozen recovery trees remain unchanged. The latest checkpoint adds evidence and reconciled requirements, not a new runtime export.
+Future development uses the verified GitHub-backed clone on `dev/student-pilot-20261109`; frozen recovery trees remain unchanged. That accepted checkpoint adds evidence and reconciled requirements. This separate camera branch has its own export and bounded checks.
 
 ## Included
 

@@ -9,3 +9,5 @@ Current milestone: a reachable protected multiplayer pilot. The exact e83 ordina
 Class differentiation/engine heat remain a separate unadopted experiment. Do not mix that older candidate into this baseline without integration and acceptance checks. Original editable Blender models are included; no paid or third-party tank pack is required.
 
 Use README.md and docs/CURRENT-STATUS.md as the current entry points. See docs/VERIFICATION.md for what has and has not been proven.
+
+Camera branch note: fix/narrow-camera-20261109 is a separately tested presentation candidate. See docs/CAMERA-20261109.json; independent source/evidence review passed; adoption is pending. The e83 full-match receipt is not replaced.
