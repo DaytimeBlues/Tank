@@ -85,7 +85,6 @@
     "scripts/arena_view.gd.uid": "57e0c27bd3805e9c638981348b93b51040acc53eae4242587c915ab4e459d1de",
     "scripts/battle_map.gd": "f11b962e2b0f4c372ec18590ba132c8055e1b005cf5209e650f974a756c01423",
     "scripts/battle_map.gd.uid": "03c658b87da9089f10665f9b83c8c39c701eee22fe8ec71e774df976847bdb7f",
-    "scripts/main.gd": "6e2a9314e54635795831e61719900f409d809d81b4d04bf32d5c379ef500c3d9",
     "scripts/main.gd.uid": "cd5058f9c9e7536e7f1a199d56e12d5be341ab638bc11961147067ab0e090af1",
     "scripts/shot_effects.gd": "b98e43fec3ed73daa15a2a870293cf0fc64f9ceb5a0ae2d5c1ba86308c41e7fa",
     "scripts/shot_effects.gd.uid": "1e788168dbedef125364d0c3f68e25702aca1504fa0a84eb5766a9827855b841",
@@ -157,6 +156,13 @@
       "baselineSha256": "cc09489485773d9b1306998e728f35984ad0977b57cc429557c1e4c6ba716196",
       "currentSha256": "6bc9f5920afa37e8391748095ffe82fdda9f9cea396c97b066e22df05f19335d",
       "reason": "Preserved original text; appended dated roadmap/reference/research reconciliation."
+    }
+  },
+  "evolvedRuntime": {
+    "scripts/main.gd": {
+      "baselineSha256": "6e2a9314e54635795831e61719900f409d809d81b4d04bf32d5c379ef500c3d9",
+      "currentSha256": "a525f79fc116240b4e45e5075caa987c9ffa1339586ab43ed21d113e0cc33ab4",
+      "reason": "Aspect-aware chase distance only; authority, controls and camera aim projection unchanged."
     }
   }
 }

@@ -1,14 +1,40 @@
 # Current status — 9 November 2026
 
-## Current development source
+## Narrow-camera candidate, 9 November 2026
+
+This branch contains a presentation-only chase-distance adjustment and its focused
+projection test. It is a candidate, not the accepted e83 runtime or a deployment.
+The preceding verified development checkpoint remains 1bf6369. The new export is
+bound by [CAMERA-20261109.json](CAMERA-20261109.json); the older complete-match
+receipt is not transferred to it.
+
+At 320x900, the baseline fixed camera left about 1 px horizontal margin on a level
+hull and clipped conservative barrel bounds at nine of 72 turret angles with
++12 degree pitch / +12 degree roll. The candidate scales chase distance only below
+aspect 0.5, capped at 2x; the wide camera remains unchanged. Its 16 projection rows
+cover four models and four viewport sizes with that stress pose and no clips.
+
+Actual 320x900 local play verified driving/steering through the existing approach,
+settled pointer aim producing accepted damage observed on both clients, whole
+side-facing cannon, same-page rejoin and return to the default 1449x1232 viewport.
+Fresh import, 54 scene checks and 212 typed-wire checks passed. No captured console
+warnings/errors; owned server/tabs closed. Independent source/evidence review passed; adoption remains
+pending. Dynamic camera collision, broader hull poses, full repeat lifecycle and
+school performance are not established by this slice.
+
+![Narrow side-aim clearance](images/camera-20261109/narrow-side.jpg)
+
+## Accepted development source
 
 Repository: https://github.com/DaytimeBlues/Tank . The verified GitHub-backed clone
 on dev/student-pilot-20261109 is the future development worktree. Its starting
 publication is 3290ff7ed4989f1e1c33cb53675e4dba139726e0. Frozen e83 and the older
 private history are preserved separately; they have not been repointed or merged.
-This checkpoint changes documentation/evidence only, not runtime code or balance.
-The source manifest retains 133 unchanged baseline files and explicitly records the
-PRD's appended reconciliation. The original publication receipt remains historical.
+That accepted checkpoint changed documentation/evidence only. The separate candidate
+above changes only camera presentation, with no authority or balance change.
+At that accepted checkpoint, the source manifest retained 133 unchanged baseline
+files and recorded the PRD reconciliation. This camera branch retains 132 unchanged
+files and separately binds the evolved main.gd runtime file. The original publication receipt remains historical.
 
 - Godot runtime baseline: e83cc89fa8f8803957f7e6d4f869e1e54fbcac8c.
 - Node/Rapier authority lineage: 00c832da029bd46ca8bce4db3b56c4d6bca7cd13.

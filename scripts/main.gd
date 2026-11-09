@@ -417,7 +417,8 @@ func _process(delta: float) -> void:
 	if not own.is_empty() and peers.has(own.id):
 		var target: Vector3 = peers[own.id].position
 		var heading := Vector3(sin(own.tank.yaw),0,cos(own.tank.yaw))
-		var desired := target-heading*20+Vector3.UP*12
+		var distance_scale := camera_distance_scale(get_viewport().get_visible_rect().size)
+		var desired := target+(Vector3.UP*12-heading*20)*distance_scale
 		camera.position = camera.position.lerp(desired,1.0-exp(-4.0*delta)) if camera_seeded else desired
 		camera.look_at(target+Vector3.UP*1.4)
 		camera_seeded = true
@@ -441,3 +442,12 @@ func _process(delta: float) -> void:
 		var point = Plane(Vector3.UP,own.tank.y).intersects_ray(camera.project_ray_origin(mouse),camera.project_ray_normal(mouse))
 		if point is Vector3: command["bearing"] = normalized_bearing(Vector2(point.x-own.tank.x,point.z-own.tank.z))
 	transport.send({"type":"input","input":command})
+
+# Preserve the existing wide-view camera. Narrow windows need more horizontal
+# room for the shared cannon envelope, especially when the hull is tilted.
+# This changes presentation only; mouse aim still projects through this camera.
+static func camera_distance_scale(viewport_size: Vector2) -> float:
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return 1.0
+	var aspect := viewport_size.x / viewport_size.y
+	return maxf(1.0,0.5 / maxf(0.25,aspect))
