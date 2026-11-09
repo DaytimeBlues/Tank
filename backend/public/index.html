@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tank Battle — Training range</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="Tank range. Driver: WASD. Gunner: pointer to aim, click or Space to fire."></canvas>
+<div id="targetLabels" aria-hidden="true"></div>
+<section id="lobby" aria-labelledby="lobbyTitle">
+  <span class="eyebrow">TANK BATTLE</span><h1 id="lobbyTitle">Training range</h1>
+  <p id="intro" class="intro">One driver. One gunner.<br>Clear three targets together.</p>
+  <label for="role">Take a seat</label><select id="role"><option value="driver">Driver</option><option value="gunner">Gunner</option></select>
+  <div id="teamChoice" hidden><label for="battleTeam">Team</label><select id="battleTeam"><option value="auto">Balance teams automatically</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
+  <button id="chooseTank" hidden>Inspect tank</button><button id="create" class="primary" disabled>Create room</button>
+  <div class="divider">or join your crew</div>
+  <label for="code">Room code</label><div class="join"><input id="code" maxlength="6" autocomplete="off" placeholder="6 characters" spellcheck="false"><button id="join" disabled>Join</button></div>
+  <p id="status" role="status">Open a second tab for the other seat.</p>
+  <button id="resumeSeat" hidden>Rejoin saved seat</button>
+  <button id="forgetSeat" hidden>Stop and forget seat</button>
+  <small>Desktop controls · same-computer test</small>
+</section>
+<section id="readyRoom" hidden aria-labelledby="readyTitle">
+  <small>Online 4v4 · Room <strong id="readyCode"></strong></small>
+  <h2 id="readyTitle" tabindex="-1">Ready room</h2>
+  <div class="ready-teams">
+    <div><h3>Blue</h3><ul id="readyBlue"></ul></div>
+    <div><h3>Red</h3><ul id="readyRed"></ul></div>
+  </div>
+  <p id="readyStatus" role="status"></p>
+  <p id="readyError" role="status"></p>
+  <div class="ready-actions"><button id="readyToggle">Mark ready</button><button id="readySwitch" hidden>Switch team</button><button id="readyStart" class="primary" hidden disabled>Start battle</button><button id="readyLeave">Leave room</button></div>
+</section>
+<section id="hangar" hidden role="dialog" aria-modal="true" aria-labelledby="hangarTitle">
+  <header><h2 id="hangarTitle">Choose your tank</h2><p id="hangarIntro">Choose a visual. Handling, damage and reload are shared.</p></header>
+  <div class="hangar-layout">
+    <nav aria-label="Tank roster"><button id="tankRosterChoice" aria-pressed="true">01 · Field prototype</button></nav>
+    <div class="tank-stage">
+      <canvas id="tankPreview" aria-label="Selected tank preview"></canvas>
+      <div class="preview-details"><small id="tankArtCaption"></small><button id="previewRotate">Rotate preview</button></div>
+    </div>
+    <article><h3 id="tankName"></h3><p id="tankProfileLabel"></p><pre id="tankStats"></pre><h4>Strengths</h4><p id="tankStrengths"></p><h4>Tradeoffs</h4><p id="tankTradeoffs"></p></article>
+  </div>
+  <footer><button id="tankBack">Back</button><button id="tankConfirm" class="primary">Confirm tank</button></footer>
+</section>
+<main id="hud" hidden>
+  <nav id="crewBar" aria-label="Session"><button id="menuToggle" aria-expanded="false" aria-controls="menu">Menu</button><strong id="seatName">Driver</strong><span id="room"></span><span id="crew" aria-label="Crew status"></span></nav>
+  <section id="objective" aria-label="Range progress"><span id="objectiveLabel" class="eyebrow">RANGE TARGETS</span><strong id="targets">0 / 3</strong><p id="battleStatus" hidden role="status" aria-live="polite"></p><div id="targetProgress"></div></section>
+  <div id="notice"><p id="mission" role="status"></p></div>
+  <section id="instruments" aria-label="Tank instruments">
+    <p id="nearbyBase" role="status" aria-atomic="true"></p>
+    <div class="speed"><strong id="speed">0</strong><span>km/h</span><small id="terrain">GRASS</small></div>
+    <div class="gauges"><div><span id="heatLabel">Engine heat</span><strong id="heat">0%</strong></div><meter id="heatMeter" min="0" max="100" value="0" aria-label="Engine heat"></meter><div class="weapon"><span id="weaponLabel">Cannon</span><strong id="reload">Ready</strong></div><progress id="reloadMeter" value="1" max="1" aria-label="Cannon loaded"></progress></div>
+    <div id="clearanceHUD" hidden aria-label="Resting muzzle clearance"><span class="eyebrow">MUZZLE CLEARANCE</span><div class="clearance-reading"><span id="clearanceMark" aria-hidden="true">…</span><strong id="clearanceLabel">Pending</strong></div><small>Resting barrel · weapons disabled</small><span id="clearanceAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span></div>
+    <p id="controls"></p>
+  </section>
+  <button id="mapToggle" aria-expanded="true" aria-controls="mapPanel">Map</button>
+  <aside id="mapPanel" aria-label="Tactical map"><canvas id="map" width="200" height="200" aria-label="Spotted targets remain visible for eight seconds"></canvas><small>CONTACTS · 8s</small><small id="mapLegend" hidden></small></aside>
+  <aside id="menu" hidden aria-labelledby="menuTitle">
+    <h2 id="menuTitle">Crew controls</h2><button id="menuClose" class="close" aria-label="Close menu">×</button>
+    <div id="menuBody">
+      <dl id="helpControls"><dt>Driver</dt><dd>W / S forward & reverse<br>A / D turn<br>Release throttle to brake & cool</dd><dt>Gunner</dt><dd>Pointer to aim · click / Space fire<br>← / → traverse · Shift for fine aim<br>E spot targets on the shared map</dd></dl>
+      <p id="helpTerrain">Mud slows the tank. Above 80% heat, engine power is halved. Cover blocks shells.</p>
+      <button id="restartBattle" hidden>Restart battlefield</button><button id="resetTrial" hidden>Reset to start (R)</button><button id="audio">Enable sound</button><button id="disconnect">Disconnect</button><button id="reconnect" hidden>Rejoin seat</button><button id="fresh">Leave room</button>
+      <p id="seatHelp">Disconnect holds your seat for 30 seconds. Leave room releases it immediately while connected; while offline, it stays reserved until expiry.</p>
+      <small><span id="menuMode">Local range</span> · <span id="performance">Measuring frame cadence…</span></small>
+    </div>
+  </aside>
+  <section id="result" hidden aria-labelledby="resultTitle"><span class="eyebrow">EXERCISE COMPLETE</span><h2 id="resultTitle">Range clear</h2><p id="resultDescription">All three targets destroyed.</p><button id="replay" class="primary">Run again with this crew</button><button id="resultClose">Keep driving</button></section>
+</main>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module" src="/game.mjs"></script>
+</body></html>

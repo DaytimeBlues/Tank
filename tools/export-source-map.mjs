@@ -1,0 +1,11 @@
+import {writeFile,readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {SOLO_MAP,SOLO_SPAWNS} from '../backend/src/solo-map.mjs';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const root=new URL('../',import.meta.url),sources={};
+for(const path of ['src/battlefield-map.mjs','src/solo-map.mjs','src/suspension.mjs','public/tank-visual.mjs'])sources[path]=sha(await readFile(new URL('backend/'+path,root)));
+const map={...SOLO_MAP,spawns:SOLO_SPAWNS};
+const raw=JSON.stringify(map)+'\n';await writeFile(new URL('data/arena.json',root),raw);
+const models={};for(const id of ['kestrel','bastion','foundry','palisade'])models[id]=sha(await readFile(new URL('assets/models/'+id+'.glb',root)));
+const report={sourceCommit:'00c832da029bd46ca8bce4db3b56c4d6bca7cd13',sources,models,mapSha256:sha(raw),chunks:map.chunks.length,bridges:map.bridges.length,trees:map.trees.length,bases:map.bases.length,triangles:map.chunks.reduce((n,c)=>n+c.indices.length/3,0),note:'Exact source-authored data, not a new map or reference-image alignment claim'};
+await writeFile(new URL('evidence/map-model-provenance.json',root),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));

@@ -1,0 +1,18 @@
+{
+  "name": "tank-battle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "lint": "node --check server.mjs && node --check src/room.mjs && node --check src/grade-drive.mjs && node --check src/suspension.mjs && node --check public/game.mjs && node --check src/capture.mjs && node --check src/battlefield-map.mjs && node --check src/battlefield-drive.mjs && node --check public/battlefield-view.mjs && node --check public/hangar.mjs && node --check public/tank-config.mjs && node --check tools/playtest-battlefield.mjs && node --check public/tank-visual.mjs && node --check tools/playtest-original-model.mjs && node --check tools/playtest-crew-seats.mjs && node --check src/battle-room.mjs && node --check public/battle-client.mjs && node --check public/battle-connection.mjs && node --check public/frame-cadence.mjs && node --check public/hosted-ticket.mjs && node --check src/hosted-tickets.mjs && node --check src/private-access.mjs && node --check deploy/render-entry.mjs && node --check tools/playtest-multitank.mjs && node --check public/map-markers.mjs && node --check tools/playtest-markers.mjs && node --check public/free-look.mjs && node --check public/combat-vfx.mjs && node --check tools/playtest-polish.mjs && node --check src/session-token.mjs && node --check src/solo-map.mjs && node --check src/solo-ai.mjs && node --check src/solo-simulation.mjs && node --check public/local-transport.mjs && node --check public/solo-worker.mjs && node --check tools/build-offline.mjs && node --check tools/serve-offline.mjs && node --check tools/playtest-solo.mjs && node --check src/online-battle.mjs && node --check src/server-config.mjs && node --check public/landscape-art.mjs && node --check tools/study-field-art.mjs",
+    "build:offline": "node tools/build-offline.mjs",
+    "preview:offline": "node tools/serve-offline.mjs"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "0.21.0",
+    "three": "0.186.1",
+    "ws": "8.22.0"
+  }
+}

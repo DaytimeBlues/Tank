@@ -1,0 +1,189 @@
+{
+  "status": "PASS",
+  "basisCommit": "230a267f40087d8194de6cd45e8d390953e2fab3",
+  "kind": "Intentional source-original Blender geometry/material changes; no reference-image alignment claim",
+  "generatorSha256": "d0256dfed69c1c4b650b109a52e982f8eeaaf8437cc7956230766c4cdd466563",
+  "originalGeneratorSha256": "5263724058c51a0e8e8a27758f2a1959317867679f8a0668b5968d818526decb",
+  "models": {
+    "kestrel": {
+      "baselineSha256": "289bf714306b84e0649bc575714f5cc2aaf0e9dd9ed71391b53970637a6fb46d",
+      "candidateSha256": "b5a86215cbc30be95345d996ce8c3b496969dda44335f2ef9df4fb247c2659ee",
+      "baselineBytes": 308824,
+      "bytes": 361204,
+      "nativeBlendSha256": "5f2844b4d66acc34f2a124d85b559c9a19d6e9d4b68e547a24857d56adb994f9",
+      "nativeBlendBytes": 186461,
+      "before": {
+        "triangles": 6308,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.850000023841858,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.850000023841858,
+            2.127499967813492,
+            4.049999952316284
+          ]
+        ]
+      },
+      "after": {
+        "triangles": 7356,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.850000023841858,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.850000023841858,
+            2.127499967813492,
+            4.049999952316284
+          ]
+        ]
+      },
+      "hierarchyAndPivotsUnchanged": true,
+      "muzzleAndBarrelGeometryUnchanged": true,
+      "boundsUnchanged": true
+    },
+    "bastion": {
+      "baselineSha256": "b448b96fb15276f661edbc5cf4aadeec5532ca0cf7e59248c34feafbf0d0c798",
+      "candidateSha256": "355d35d98ab986a83f8444ada4d67d71d922baceac7ac2d347be730308d9ec59",
+      "baselineBytes": 298888,
+      "bytes": 356632,
+      "nativeBlendSha256": "ee718e54a53158cfaac3b8198eda0e5f24a91f0f88c750390922f105684ccafc",
+      "nativeBlendBytes": 184595,
+      "before": {
+        "triangles": 6000,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.850000023841858,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.850000023841858,
+            2.224999964237213,
+            4.049999952316284
+          ]
+        ]
+      },
+      "after": {
+        "triangles": 7176,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.850000023841858,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.850000023841858,
+            2.224999964237213,
+            4.049999952316284
+          ]
+        ]
+      },
+      "hierarchyAndPivotsUnchanged": true,
+      "muzzleAndBarrelGeometryUnchanged": true,
+      "boundsUnchanged": true
+    },
+    "foundry": {
+      "baselineSha256": "42f395aa3b57564610441b5b324338ce6b3c3707a6f4864422ae8a0ef11e3cd8",
+      "candidateSha256": "595b3a12b3a5cdbca403ad8185d2d2efb5298e9faaa268f408cbb68e15bee4b9",
+      "baselineBytes": 317820,
+      "bytes": 343432,
+      "nativeBlendSha256": "6c6faf26394836e3399b7a73e68ffa841543c2db37a61b32bfc54e89408679c5",
+      "nativeBlendBytes": 188555,
+      "before": {
+        "triangles": 6904,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.8300000429153442,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.8300000429153442,
+            2.2705000042915344,
+            4.049999952316284
+          ]
+        ]
+      },
+      "after": {
+        "triangles": 7440,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.8300000429153442,
+            -0.04749999940395355,
+            -2.1374623775482178
+          ],
+          [
+            1.8300000429153442,
+            2.2705000042915344,
+            4.049999952316284
+          ]
+        ]
+      },
+      "hierarchyAndPivotsUnchanged": true,
+      "muzzleAndBarrelGeometryUnchanged": true,
+      "boundsUnchanged": true
+    },
+    "palisade": {
+      "baselineSha256": "ef51726711c53f8e99f6145b5350d02117faca686894db05eb29901cfd73cde3",
+      "candidateSha256": "42ada188f1f38342456cdc1b2b56f0d052ede9765e585ef6aa481d674c33dc0f",
+      "baselineBytes": 341144,
+      "bytes": 372620,
+      "nativeBlendSha256": "0e3f4da73d201a51b07e0b4298a4d4ad85e91dcdda3e5456787679821ac31671",
+      "nativeBlendBytes": 187918,
+      "before": {
+        "triangles": 7000,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.8420000076293945,
+            -0.04749999940395355,
+            -2.142271041870117
+          ],
+          [
+            1.8420000076293945,
+            2.2419999837875366,
+            4.049999952316284
+          ]
+        ]
+      },
+      "after": {
+        "triangles": 7636,
+        "primitives": 12,
+        "materials": 6,
+        "worldBounds": [
+          [
+            -1.8420000076293945,
+            -0.04749999940395355,
+            -2.142271041870117
+          ],
+          [
+            1.8420000076293945,
+            2.2419999837875366,
+            4.049999952316284
+          ]
+        ]
+      },
+      "hierarchyAndPivotsUnchanged": true,
+      "muzzleAndBarrelGeometryUnchanged": true,
+      "boundsUnchanged": true
+    }
+  }
+}

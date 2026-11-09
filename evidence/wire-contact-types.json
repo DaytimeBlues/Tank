@@ -1,0 +1,330 @@
+{
+	"cases": [
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "String",
+			"label": "enemy String / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "String",
+			"label": "enemy String / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "null / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Nil",
+			"label": "null / blocked=true"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "bool",
+			"label": "legacy true / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "bool",
+			"label": "legacy true / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "bool",
+			"label": "legacy false / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "bool",
+			"label": "legacy false / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "String",
+			"label": "empty String / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "String",
+			"label": "empty String / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "omitted / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Nil",
+			"label": "omitted / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Nil",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "missing blocked miss"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "Nil",
+			"expectedContact": true,
+			"hitType": "String",
+			"label": "missing blocked enemy"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "int",
+			"label": "unsupported hit int / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "float",
+			"label": "unsupported hit float / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "float",
+			"label": "unsupported hit float / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Array",
+			"label": "unsupported hit Array / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Array",
+			"label": "unsupported hit Array / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Array",
+			"label": "unsupported hit Array / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Array",
+			"label": "unsupported hit Array / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Dictionary",
+			"label": "unsupported hit Dictionary / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Dictionary",
+			"label": "unsupported hit Dictionary / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Dictionary",
+			"label": "unsupported hit Dictionary / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Dictionary",
+			"label": "unsupported hit Dictionary / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Vector3",
+			"label": "unsupported hit Vector3 / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Vector3",
+			"label": "unsupported hit Vector3 / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "bool",
+			"expectedContact": false,
+			"hitType": "Object",
+			"label": "unsupported hit Object / blocked=false"
+		},
+		{
+			"actualContacts": 1,
+			"blockedType": "bool",
+			"expectedContact": true,
+			"hitType": "Object",
+			"label": "unsupported hit Object / blocked=true"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Nil",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked Nil"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "int",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked int"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "int",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked int"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "float",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked float"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "String",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked String"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "String",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked String"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "String",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked String"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Array",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked Array"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Dictionary",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked Dictionary"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Vector3",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked Vector3"
+		},
+		{
+			"actualContacts": 0,
+			"blockedType": "Object",
+			"expectedContact": false,
+			"hitType": "Nil",
+			"label": "unsupported blocked Object"
+		}
+	],
+	"checks": 212,
+	"failures": [],
+	"kind": "typed-wire headless presentation/history/pool fixture; not server, rendering or Web acceptance",
+	"sourceBinding": {
+		"effects": "b98e43fec3ed73daa15a2a870293cf0fc64f9ceb5a0ae2d5c1ba86308c41e7fa",
+		"fixture": "b2d22b8c9d33eb3f8320b6da79bc5fb8f70fa8353345c9ceeb0268e8b134c916",
+		"main": "6e2a9314e54635795831e61719900f409d809d81b4d04bf32d5c379ef500c3d9",
+		"shader": "72c1b97930c3dae58ee4196b829cc4ffb643ae66c3bd7ec996a25fb5e4480600"
+	},
+	"stage": "complete",
+	"status": "PASS"
+}

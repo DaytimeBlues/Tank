@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "00c832da029bd46ca8bce4db3b56c4d6bca7cd13",
+  "sources": {
+    "src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",
+    "src/solo-map.mjs": "d5448b0987756423f27daa27c29cecaa1862f40d79bb5da7862badb75421efd1",
+    "src/suspension.mjs": "3f4dde9d50b70d2f9c1354ebc6c130e5d5424606bb47a166a9dcc4f25974ab7f",
+    "public/tank-visual.mjs": "8413ca0b0fc6319447f81ceca4bcba643da7b8894865955fbd15fe3396411445"
+  },
+  "models": {
+    "kestrel": "289bf714306b84e0649bc575714f5cc2aaf0e9dd9ed71391b53970637a6fb46d",
+    "bastion": "b448b96fb15276f661edbc5cf4aadeec5532ca0cf7e59248c34feafbf0d0c798",
+    "foundry": "42f395aa3b57564610441b5b324338ce6b3c3707a6f4864422ae8a0ef11e3cd8",
+    "palisade": "ef51726711c53f8e99f6145b5350d02117faca686894db05eb29901cfd73cde3"
+  },
+  "mapSha256": "f4f2ff9cc9dd197b3e6ecb736d27da26c341bbf82d865b3997cce460aa5ada5b",
+  "chunks": 16,
+  "bridges": 3,
+  "trees": 98,
+  "bases": 7,
+  "triangles": 8192,
+  "note": "Exact source-authored data, not a new map or reference-image alignment claim"
+}

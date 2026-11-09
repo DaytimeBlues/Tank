@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-09",
+  "source": "e83cc89fa8f8803957f7e6d4f869e1e54fbcac8c",
+  "scope": "Curated source publication only",
+  "godotVersion": "4.8-beta2 official cafc17a19",
+  "godotImport": "PASS",
+  "focusedGodotTests": [
+    {
+      "test": "smoke.gd",
+      "exitCode": 0,
+      "status": "PASS",
+      "checks": 54,
+      "failures": [],
+      "errorOrWarningMarkers": 0,
+      "rendering": "Headless fixture, not ordinary browser or hosted acceptance"
+    },
+    {
+      "test": "wire_contact_types.gd",
+      "exitCode": 0,
+      "status": "PASS",
+      "checks": 212,
+      "failures": [],
+      "errorOrWarningMarkers": 0,
+      "rendering": "Headless fixture, not ordinary browser or hosted acceptance"
+    }
+  ],
+  "originalModelValidation": "PASS: all four models, hierarchy/pivots/muzzle/bounds and source hashes",
+  "backendModuleParse": {
+    "checked": 37,
+    "failures": 0
+  },
+  "legacyNpmTest": "NOT RUN: bridge snapshot omits historical backend tests",
+  "legacyNpmLint": "NOT RUN: script references omitted historical tools",
+  "typecheck": "NOT AVAILABLE: no script",
+  "ordinaryCurrentFullLifecycle": "NOT RUN in this publication check",
+  "hostedPilot": "NOT RUN / no deployment",
+  "privateHistory": "Not included; only destination initial license commit and this curated snapshot",
+  "secretPatterns": "No known token/private-key/JWT/credential-URL patterns found; not exhaustive security audit",
+  "images": "Four original game captures visually inspected; historical captions retained",
+  "deploymentPreflight": {
+    "pages": false,
+    "workflows": 0,
+    "webhooks": 0,
+    "sourceChanges": "No workflow or active root deployment blueprint included"
+  },
+  "unchangedSourceFiles": 134,
+  "selectedNewFiles": 150,
+  "sourceManifestVerification": "134/134 SHA-256 matches after Godot checks",
+  "curatedMarkdownLinks": "PASS: all local links resolve",
+  "omittedLocalHarnesses": 12,
+  "whitespaceCheck": {
+    "status": "PRE-EXISTING WARNING",
+    "detail": "Exact source preserves CRLF with * -text. CRLF-aware git diff --check reports one unchanged trailing blank line in backend/src/terrain-query.mjs:37. No runtime bytes normalized to silence it."
+  },
+  "dependencyLicenses": "Verified from installed pinned package metadata: three MIT, ws MIT, Rapier Apache-2.0; none vendored"
+}

@@ -1,0 +1,11 @@
+.godot/
+.env*
+backend/node_modules/
+backend/backups/
+recovery/
+web/*
+!web/.gdignore
+*.log
+!evidence/*.log
+*.tmp
+!evidence/**/*.log

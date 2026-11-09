@@ -1,0 +1,26 @@
+# Preparation only. Do not activate without approved private access, host credential,
+# exact service binding, resource/cost approval, and live HTTPS/WSS verification.
+services:
+  - type: web
+    name: tank-battle-online-candidate
+    runtime: node
+    buildCommand: npm ci --omit=dev --ignore-scripts
+    startCommand: node deploy/render-entry.mjs
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    numInstances: 1
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_VERSION
+        value: 24.18.0
+      - key: TANK_NETWORK_MODE
+        value: hosted
+      - key: TANK_PRIVATE_PILOT
+        value: one-instance-epoch-v1
+      - key: TANK_ALLOWED_ORIGINS
+        sync: false
+      - key: TANK_HOST_KEY_SHA256
+        sync: false
+# Render supplies PORT. The pilot entry requires its exact HTTPS onrender.com URL
+# and the digest of an independently approved host key; no defaults are installed.
+# No resource, account, payment, credential or access grant is created by this file.

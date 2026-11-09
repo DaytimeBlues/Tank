@@ -1,0 +1,7 @@
+{
+	"checks": 54,
+	"engine": "4.8-beta2 (official)",
+	"failures": [],
+	"kind": "Godot scene/map/actual imported-model smoke",
+	"status": "PASS"
+}
