@@ -1,0 +1,61 @@
+{
+  "receipt_status": "completed_documentation_trial",
+  "task": "Exercise instruction routing and produce an actual documentation-only work receipt",
+  "repository": "DaytimeBlues/Tank",
+  "branch": "docs/instruction-routing-20261110",
+  "source_commit": "80c57ea1d1b121be230914b0d77733e665c379ac",
+  "target_paths": [
+    "docs/receipts/instruction-routing-20261110.json"
+  ],
+  "documents_loaded": [
+    "AGENTS.md",
+    "docs/WORKFLOW-ROUTING.md",
+    "docs/WORK-RECEIPT-TEMPLATE.json",
+    "README.md",
+    "PROJECT_CARD.md",
+    "PRD.md",
+    "docs/CURRENT-STATUS.md",
+    "docs/VERIFICATION.md",
+    "backend/deploy/render.yaml.example"
+  ],
+  "instruction_scope": {
+    "root": "AGENTS.md",
+    "descendant_instructions": "No AGENTS.md or AGENTS.override.md present under docs in inspected tree",
+    "scope_expansion": "none"
+  },
+  "skills": [
+    {
+      "name": "project-recall",
+      "state": "applied",
+      "application_evidence": "Checked repository identity, current entry documents, branches and evidence boundaries before proposing changes; did not treat historical runtime evidence as fresh acceptance."
+    }
+  ],
+  "changes": [
+    "Add this sanitized receipt after loading published routing instructions"
+  ],
+  "checks": [
+    {
+      "name": "Root instruction preservation, internal links and JSON parsing",
+      "result": "pass"
+    },
+    {
+      "name": "Documentation contract cases: root/nested/new folder/scope expansion/missing skill/branch boundary/evidence honesty/self-hash",
+      "result": "pass",
+      "limitation": "Text-contract checks, not automatic enforcement or real game execution"
+    },
+    {
+      "name": "Game runtime and visual checks",
+      "result": "not_run",
+      "limitation": "Documentation-only scope"
+    }
+  ],
+  "checkpoint": {
+    "source_commit": "80c57ea1d1b121be230914b0d77733e665c379ac",
+    "final_commit_recorded_externally": null,
+    "backup_restore_status": "Remote documentation readback verified; full project backup/restore not checked"
+  },
+  "blockers": [
+    "Active worker synchronization not established; activate through reviewed working-branch PR, not a forced branch update"
+  ],
+  "next_step": "Project owner integrates the docs-only PR into the active branch, reads updated instructions and records next actual project task."
+}
