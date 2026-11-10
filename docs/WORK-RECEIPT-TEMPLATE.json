@@ -1,0 +1,34 @@
+{
+  "receipt_status": "template",
+  "task": "",
+  "repository": "",
+  "branch": "",
+  "source_commit": "",
+  "target_paths": [],
+  "documents_loaded": [],
+  "skills": [
+    {
+      "name": "",
+      "revision_or_hash": null,
+      "state": "not_used",
+      "application_evidence": ""
+    }
+  ],
+  "changes": [],
+  "checks": [
+    {
+      "name": "",
+      "result": "not_run",
+      "evidence": null,
+      "limitation": ""
+    }
+  ],
+  "checkpoint": {
+    "source_commit": null,
+    "diff_or_artifact_sha256": null,
+    "final_commit_recorded_externally": null,
+    "backup_restore_status": "not_checked"
+  },
+  "blockers": [],
+  "next_step": ""
+}
