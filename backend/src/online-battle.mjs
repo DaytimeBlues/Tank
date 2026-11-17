@@ -62,18 +62,24 @@ class OnlineFourBattle extends BattleRoom {
   }
   snapshot(token) {
     const state = super.snapshot(token);
-    if (!this.waiting) return { ...state, staging: { waiting: false } };
+    if (!this.waiting) return { ...state, practice: !!this.practice, staging: { waiting: false } };
     const block = this.startBlock();
     return { ...state, staging: { waiting: true, block, canStart: !block && state.playerId === this.hostId,
       switchTo: this.teamSwitchTarget(this.seats[state.playerId]) },
       players: state.players.map(p => ({ ...p, ready: !!this.seats[p.id].ready })) };
   }
 }
-export function createOnlineBattle({ tankId = 'prototype', format } = {}) {
+export function createOnlineBattle({ tankId = 'prototype', format, practice = false } = {}) {
+  if (typeof practice !== 'boolean' || practice && format !== '4v4') throw new Error('Invalid practice mode');
   format = battleFormat(format);
   const room = format === '4v4'
     ? new OnlineFourBattle({ tankId, configuration: { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS } })
     : new BattleRoom({ tankId });
+  if (practice) {
+    room.practice = true;
+    room.waiting = false;
+    room.rules = Object.freeze({ ...room.rules, maxPlayers: 1 });
+  }
   room.format = format;
   return room;
 }

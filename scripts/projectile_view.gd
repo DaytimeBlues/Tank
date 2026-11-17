@@ -7,8 +7,8 @@ var sampled := 0.0
 var seen: Dictionary = {}
 var seeded := false
 var fx: TankAcceptedShotEffects
-var voices: Array[AudioStreamPlayer3D] = []
-var audio_index := 0
+const ImpactAudio = preload("res://scripts/bounded_impact_audio.gd")
+var impact_audio = ImpactAudio.new()
 func _ready() -> void:
  var mesh := SphereMesh.new()
  mesh.radius=0.13; mesh.height=0.65; mesh.radial_segments=8; mesh.rings=4
@@ -18,18 +18,13 @@ func _ready() -> void:
   var n := MeshInstance3D.new(); n.mesh=mesh; n.material_override=material
   n.visible=false; n.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
   add_child(n); nodes.append(n)
- for i in range(8):
-  var v := AudioStreamPlayer3D.new(); v.stream=load("res://assets/effects/cannon_boom.wav")
-  v.volume_db=-20; v.max_db=-20; v.max_distance=180; v.unit_size=20
-  add_child(v); voices.append(v)
+ impact_audio.initialize(self,load("res://assets/effects/cannon_boom.wav"))
 func clear() -> void:
  samples.clear(); seen.clear(); seeded=false
  for n in nodes: n.hide()
- for v in voices: v.stop()
+ impact_audio.clear()
 func boom(at: Vector3) -> void:
- if voices.is_empty(): return
- var v:=voices[audio_index%voices.size()]; audio_index+=1
- v.position=at; v.play()
+ impact_audio.play_at(at)
 func accept(snapshot: Dictionary, now: float) -> void:
  samples=snapshot.get("projectiles",[]).slice(0,CAP); sampled=now
  var server_time: float=float(snapshot.get("time",0))

@@ -167,7 +167,7 @@ export class BattleRoom {
       const occupants = Object.values(this.seats).filter(p => p.drive).map(p => ({ ...p.drive.occupant(p.connected), id: p.id, team: p.team, alive: p.health > 0 }));
       for (const event of advanceCaptures(this.bases, occupants, dt)) this.events.push({ ...event, id: ++this.eventId, time: this.time });
       if (this.events.length > 100) this.events.splice(0, this.events.length - 100);
-      this.winner = ['blue', 'red'].find(team => this.bases.every(b => b.owner === team)) ?? null;
+      this.winner = this.practice ? null : ['blue', 'red'].find(team => this.bases.every(b => b.owner === team)) ?? null;
       if (this.winner) { this.projectilePool.clear(); for (const p of Object.values(this.seats)) p.input = {}; }
     }
   }

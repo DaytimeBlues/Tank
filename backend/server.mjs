@@ -238,6 +238,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         if (Object.hasOwn(msg,'roleProtocol') && msg.roleProtocol !== 1) throw new Error('Unknown role protocol');
         if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
         if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k))) throw new Error('Invalid role admission');
+        if (Object.hasOwn(msg, 'practice') && (typeof msg.practice !== 'boolean' || msg.type !== 'create' || msg.mode !== 'battle' || msg.format !== '4v4' || msg.roleProtocol === 1)) throw new Error('Invalid practice request');
         let code = String(msg.code ?? '').toUpperCase();
         let room;
         if (msg.type === 'create') {
@@ -247,7 +248,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.

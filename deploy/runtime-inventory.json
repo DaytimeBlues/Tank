@@ -105,6 +105,8 @@
     "scripts/arena_view.gd.uid",
     "scripts/battle_map.gd",
     "scripts/battle_map.gd.uid",
+    "scripts/bounded_impact_audio.gd",
+    "scripts/bounded_impact_audio.gd.uid",
     "scripts/input_gate.gd",
     "scripts/input_gate.gd.uid",
     "scripts/main.gd",

@@ -33,6 +33,8 @@ var input_gate = preload("res://scripts/input_gate.gd").new()
 var window_focused := true
 var input_elapsed := 0.0
 var camera_seeded := false
+var orbit_yaw := 0.0
+var orbit_height := 12.0
 var roster_label: Label
 var switch_button: Button
 var rematch_button: Button
@@ -213,9 +215,10 @@ func _build_ui() -> void:
 	)
 	for field in [port_field,room_field]:
 		field.text_submitted.connect(func(_text: String): get_viewport().gui_release_focus())
-	status_label = _label("Teacher: create a room. Students: enter its code and join. Both teams must mark Ready before the host starts.",content)
+	status_label = _label("Start Solo Practice to explore and shoot immediately. For multiplayer, create/join a room and mark Ready.",content)
 	var buttons := HFlowContainer.new()
 	content.add_child(buttons)
+	connect_buttons.append(_button("SOLO PRACTICE - drive and shoot",buttons,func(): _connect_room("create","4v4",false,true)))
 	connect_buttons.append(_button("Teacher: Create room",buttons,func(): _connect_room("create","4v4")))
 	connect_buttons.append(_button("Create handling trial",buttons,func(): _connect_room("create","4v4",true)))
 	connect_buttons.append(_button("Join room",buttons,func(): _connect_room("join","4v4")))
@@ -248,7 +251,7 @@ func _build_ui() -> void:
 	switch_button.disabled = true
 	# Ready/Start stay before a growing eight-seat roster in the scroll view.
 	content.move_child(ready_row,roster_label.get_index())
-	_label("W/S drive · A/D turn · pointer/arrows aim · Space/click fire. Capture all 7 bases to win. Each hull takes 3 hits; cannon reload is 4 seconds. Online play continues while the menu is open.",content)
+	_label("W/S drive · A/D turn · pointer/arrows aim · Space/click fire. Right-drag looks around. Capture all 7 bases to win. Each hull takes 3 hits; cannon reload is 4 seconds. Online play continues while the menu is open.",content)
 	if OS.has_feature("web"):
 		_button("Private access / invitations",content,func():
 			var location = JavaScriptBridge.get_interface("location")
@@ -270,7 +273,7 @@ func _build_ui() -> void:
 	hud_panel = PanelContainer.new()
 	hud_panel.add_theme_stylebox_override("panel",style.duplicate())
 	canvas.add_child(hud_panel)
-	stats_label = _label("W/S drive · A/D turn · arrows or pointer aim · Space / click fire\nEscape or focus loss cancels controls. Online play continues.",hud_panel)
+	stats_label = _label("W/S drive · A/D turn · right-drag look / pointer aim · Space / click fire\nEscape or focus loss cancels controls. Online play continues.",hud_panel)
 	# Autowrap initially measures at a one-pixel width. Bound that minimum
 	# height before the parent container's first layout to keep this HUD onscreen.
 	stats_label.max_lines_visible = 4
@@ -297,7 +300,7 @@ func _show_room_panel() -> void:
 static func normalized_bearing(offset: Vector2) -> float:
 	return atan2(offset.x,offset.y)/PI
 
-func _connect_room(kind: String, format_value: String, role_trial: bool = false) -> void:
+func _connect_room(kind: String, format_value: String, role_trial: bool = false, practice: bool = false) -> void:
 	if not presentation_prepared:
 		_suspend_controls()
 		input_elapsed = 0
@@ -306,6 +309,7 @@ func _connect_room(kind: String, format_value: String, role_trial: bool = false)
 		return
 	for button in connect_buttons: button.disabled = true
 	var request := {"type":kind,"mode":"battle","format":format_value,"role":"commander","team":"auto","visualId":TankPortVisual.IDS[roster.selected],"tankId":"prototype"}
+	if practice: request["practice"] = true
 	if role_trial:
 		request["roleProtocol"] = 1
 		request["roleId"] = ROLE_IDS[role_selector.selected]
@@ -536,6 +540,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_neutral()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and _controls_eligible() and not _pointer_over_ui(event.position):
+		orbit_yaw -= event.relative.x * 0.006
+		orbit_height = clampf(orbit_height + event.relative.y * 0.06, 4.0, 24.0)
+		get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed and not panel.get_global_rect().has_point(event.position):
 		get_viewport().gui_release_focus()
 
@@ -570,8 +578,8 @@ func _process(delta: float) -> void:
 	var own := own_player()
 	if not own.is_empty() and peers.has(own.id):
 		var target: Vector3 = peers[own.id].position
-		var heading := Vector3(sin(own.tank.yaw),0,cos(own.tank.yaw))
-		var desired := target-heading*20+Vector3.UP*12
+		var heading := Vector3(sin(own.tank.yaw+orbit_yaw),0,cos(own.tank.yaw+orbit_yaw))
+		var desired := target-heading*20+Vector3.UP*orbit_height
 		camera.position = camera.position.lerp(desired,1.0-exp(-4.0*delta)) if camera_seeded else desired
 		camera.look_at(target+Vector3.UP*1.4)
 		camera_seeded = true

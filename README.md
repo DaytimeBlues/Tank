@@ -1,6 +1,6 @@
 # Tank Battle browser release
 
-Godot 4.8-beta2 browser client and Node/Rapier multiplayer server. Runtime/export source df1f7690f0e4d7a8d10390408361755157d9ca11; prepared from verified checkpoint 7f4d937.
+Godot 4.8-beta2 browser client and Node/Rapier multiplayer server. Runtime/export source ad58ab37e15b75c5f1299b1938a2fe1fe7efcae3; prepared from verified checkpoint c197b83.
 
 ## Credits and licenses
 
@@ -14,3 +14,8 @@ Godot 4.8-beta2 browser client and Node/Rapier multiplayer server. Runtime/expor
 - Dependencies installed from lockfile: Three.js MIT, ws MIT, Rapier Apache-2.0.
 
 This is a curated release. Private notes, evidence logs, history, credentials and unrelated projects are not included. Browser testing has verified a preceding build's two-player start and travelling shot; current full-match, audio and school-device acceptance remain pending. Do not interpret source publication as acceptance.
+
+## Solo testing
+
+Choose Solo test drive to drive and shoot without another player. Right-drag orbits the camera. This is a one-seat practice room, not a complete opponent match. Twelve local regressions and Godot import, headless runtime and export checks passed; hosted browser acceptance is still pending.
+

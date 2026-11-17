@@ -1,5 +1,5 @@
 {
-  "source": "df1f7690f0e4d7a8d10390408361755157d9ca11",
+  "source": "ad58ab37e15b75c5f1299b1938a2fe1fe7efcae3",
   "godot": "4.8-beta2 official cafc17a19",
   "preset": "Web no-thread Compatibility",
   "files": [
@@ -21,7 +21,7 @@
     {
       "name": "index.html",
       "bytes": 5470,
-      "sha256": "2d2e020ed41955adf4348c2c9d0c52efbb182e13d33d0394466714ac666500d6"
+      "sha256": "e048e0bc0f67409a1c5842e26fc9e9efb2296eaaf480a07b624bc6918a90745d"
     },
     {
       "name": "index.icon.png",
@@ -35,8 +35,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 4690924,
-      "sha256": "19e2d6766a79d75699819b12010acd3e16c04826c24407699d6ce170fd29d747"
+      "bytes": 4692804,
+      "sha256": "9816f36058b3ed2e22034a270cdc2c18fc9328111ea7aa8dd8ee9086c07eb316"
     },
     {
       "name": "index.png",
@@ -122,14 +122,14 @@
     "backend/public/tank-visual.mjs": "bd3ceed769f602268cca4bf3951ef296d8ef119af0bd6392e44cf04f4158a19d",
     "backend/run-godot-hosted.mjs": "7e7c9e7e57bbe50f9d5e19ab13d5a8194859ccfc112da8d16b9ae9721bd04899",
     "backend/run-godot-local.mjs": "6b18fd56dde43ac9d87d828255ce84c87fa5a5063918572b137e0b541f8773af",
-    "backend/server.mjs": "83dfd79fcd2c8c302deb73dd1ea3233eba5afdef9796cd8abe5d192678f2cf52",
-    "backend/src/battle-room.mjs": "2f0ac16c10ebda03ed7314e49b34a3295785e2bdd250c8c7adf87212a67c75b3",
+    "backend/server.mjs": "649d6a91dbdb2574bc743ef64c7b5bd23f18f4736328e4e3bdb386238222fa9a",
+    "backend/src/battle-room.mjs": "980443d9261720266ec75a7baed43443819a7886807d02f5026275072f866dd7",
     "backend/src/battlefield-drive.mjs": "eeddcc33ce670a7654b7cccd30b0e795a43c1bafe4077aef6f02509d3fdd08a0",
     "backend/src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",
     "backend/src/capture.mjs": "9bef0f37f314ddf960c2816e0a0c691edaaa299c119eefd596c30b20baae7d3e",
     "backend/src/grade-drive.mjs": "28c7a8830bb975fab890971af2f77328ec343f301648b25a94fc8f3bca6790dc",
     "backend/src/hosted-tickets.mjs": "ad589a6c0bc2c703cb150f8189171985d752baba6e58c8d17fcbfd7359733ed2",
-    "backend/src/online-battle.mjs": "4b4bdca117727dd7f7aaba2be792ab71ebe4111a49e0f296a5e1988924219b52",
+    "backend/src/online-battle.mjs": "e22d1ed3198c8294dce3bc5b77c33cbe3181d4b00c4f532cfc959c34f1530831",
     "backend/src/private-access.mjs": "5abe88572f76249388be90108bff7df858415b144785cf012c6ebfba6ba0488d",
     "backend/src/projectiles.mjs": "be593ec6924dde1405b0feffaf00edaae5099b8452fbc129f2164e3a2cb084cd",
     "backend/src/roadside-cover.mjs": "3065f93eb5d0204056609908fe42e5bb94a4c40b09b5bd4821e888a61f4c8a54",
@@ -155,15 +155,17 @@
     "scripts/arena_view.gd.uid": "57e0c27bd3805e9c638981348b93b51040acc53eae4242587c915ab4e459d1de",
     "scripts/battle_map.gd": "f11b962e2b0f4c372ec18590ba132c8055e1b005cf5209e650f974a756c01423",
     "scripts/battle_map.gd.uid": "03c658b87da9089f10665f9b83c8c39c701eee22fe8ec71e774df976847bdb7f",
+    "scripts/bounded_impact_audio.gd": "68ea36c78edd100436fe3014b75876dac6bfae434b9b0219e687f00e34357707",
+    "scripts/bounded_impact_audio.gd.uid": "169b686e9aa8e18826fa8a070d09eb26b6ba4643d306eabf049531e19d64600a",
     "scripts/input_gate.gd": "ee99ec5c080563c612bda9f1547672817f9e51597aa92ea8b31bf037c012a044",
     "scripts/input_gate.gd.uid": "05fe13b51390bce23cb5efd1378b5c521bae6af8129db9b497b3a6d721d414f6",
-    "scripts/main.gd": "f98a52206991f95acdd97f0fb2e10d08693655effc454075d856164e0fcf9711",
+    "scripts/main.gd": "2a326540c5797d7d79f437ba48f8cdce34770d70a2329cf80d773710f585465d",
     "scripts/main.gd.uid": "cd5058f9c9e7536e7f1a199d56e12d5be341ab638bc11961147067ab0e090af1",
     "scripts/meshy_crown_view.gd": "b28da02dda471e6a25e5a5fba8f9bb04f12a16ba9d8e4e04e7c9a48189d4ecf6",
     "scripts/meshy_crown_view.gd.uid": "db84a19ee0a8316f5151fffb3b0d7b6856052912352c28134db93ad61eac47e8",
     "scripts/north_verge_view.gd": "505cb23c2e3e355dc7394ecee1d60b28d78d2f88cad3b8aabca4fafccfd21222",
     "scripts/north_verge_view.gd.uid": "82d954429dc2498af80912f0ec36c172f0f5092d6ac3fe048bd0a031e10ece86",
-    "scripts/projectile_view.gd": "0565888fbde17e07c77e9e9deb9106c27ce1fc6a74316402bcbbd8b34e4e3dec",
+    "scripts/projectile_view.gd": "3e0e543e07d2f988d1d5fe5b563f47d8546aa16f6cf119e16e6088402025db87",
     "scripts/projectile_view.gd.uid": "06e434b4849fce511316f9a019c80ff0c923da3ff52da893dd643362a2160d67",
     "scripts/road_wear_material.gd": "e722c0c2c1ceb03099e023e52014fc6cfd35003b0292389b4549aa9648a858ac",
     "scripts/road_wear_material.gd.uid": "443da47e45072e3d924e86e606d25ab0f5adfd031d84a74ed28c787279922f3d",
