@@ -1,4 +1,4 @@
-export const TANKS=Object.freeze([{id:'prototype',name:'Field prototype',role:'Capture and manoeuvre',forwardMps:3,damage:1,reloadSeconds:4,durability:null,massKg:1000,
+export const TANKS=Object.freeze([{id:'prototype',name:'Field prototype',role:'Capture and manoeuvre',forwardMps:3,damage:1,reloadSeconds:4,durability:null,massKg:1000,health:3,turretRadiansPerSecond:.75,
  strengths:['One player controls driving and aiming','Assisted suspension and pivot steering'],tradeoffs:['Primitive model — not final tank art','Armour and tank damage are not modelled','Turning reduces drive target speed']}].map(Object.freeze));
 export function tankProfile(id='prototype'){const t=TANKS.find(x=>x.id===id);if(!t)throw new Error('Unknown tank configuration');return t;}
 export function selectionState(catalog=TANKS,initial=catalog[0].id){

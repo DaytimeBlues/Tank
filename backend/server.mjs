@@ -5,6 +5,7 @@ import { randomInt, randomBytes, createHash } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Room, initPhysics } from './src/room.mjs';
 import { validateBattleOptions } from './src/battle-room.mjs';
+import { createSeatRolePrototype, validateSeatRoleAdmission } from './src/seat-roles.mjs';
 import { battleFormat, createOnlineBattle } from './src/online-battle.mjs';
 import { serverConfig, acceptsOrigin, validateOrigins } from './src/server-config.mjs';
 import { createHostedTickets, bounded } from './src/hosted-tickets.mjs';
@@ -23,6 +24,7 @@ Object.assign(files, {
   '/licenses/three.txt': 'node_modules/three/LICENSE',
   '/map-markers.mjs': 'public/map-markers.mjs',
   '/tank-visual.mjs': 'public/tank-visual.mjs',
+  '/model-gun.mjs': 'public/model-gun.mjs',
   '/landscape-art.mjs': 'public/landscape-art.mjs',
   '/vendor/loaders/GLTFLoader.js': 'node_modules/three/examples/jsm/loaders/GLTFLoader.js',
   '/vendor/utils/BufferGeometryUtils.js': 'node_modules/three/examples/jsm/utils/BufferGeometryUtils.js',
@@ -35,7 +37,7 @@ const assets = Object.fromEntries(await Promise.all(Object.entries(files).map(as
 })));
 const assetBytes = new Map(Object.entries(files).map(([url,file])=>[file,assets[url]]));
 const fingerprint = createHash('sha256');
-for (const file of ['server.mjs', 'src/online-battle.mjs', 'src/server-config.mjs', 'src/hosted-tickets.mjs', 'src/private-access.mjs', 'deploy/render-entry.mjs', 'src/solo-map.mjs', 'src/room.mjs', 'src/battle-room.mjs', 'src/session-token.mjs', 'src/grade-drive.mjs', 'src/suspension.mjs', 'src/terrain-query.mjs', 'src/battlefield-map.mjs', 'src/battlefield-drive.mjs', 'src/capture.mjs', 'package-lock.json', ...Object.values(files)]) {
+for (const file of ['server.mjs', 'src/online-battle.mjs', 'src/seat-roles.mjs', 'src/roadside-map.mjs', 'src/roadside-cover.mjs', 'data/roadside-cover.json', 'src/projectiles.mjs', 'src/server-config.mjs', 'src/hosted-tickets.mjs', 'src/private-access.mjs', 'deploy/render-entry.mjs', 'src/solo-map.mjs', 'src/room.mjs', 'src/battle-room.mjs', 'src/session-token.mjs', 'src/grade-drive.mjs', 'src/suspension.mjs', 'src/terrain-query.mjs', 'src/battlefield-map.mjs', 'src/battlefield-drive.mjs', 'src/capture.mjs', 'package-lock.json', ...Object.values(files)]) {
   fingerprint.update(file);
   fingerprint.update(assetBytes.has(file) ? assetBytes.get(file) ?? 'missing optional visual' : await readFile(new URL(file, import.meta.url)));
 }
@@ -212,6 +214,11 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           else binding.room.start(binding.token);
           return;
         }
+        if (msg.type === 'selectRole') {
+          if (!binding?.room.selectRole) throw new Error('Role trial unavailable');
+          if (Object.keys(msg).some(k=>!['type','roleId'].includes(k))) throw new Error('Invalid role request');
+          binding.room.selectRole(binding.token,{roleId:msg.roleId}); return;
+        }
         if (msg.type === 'input') {
           if (!binding) throw new Error('Join a room first');
           binding.room.command(binding.token, msg.input); return;
@@ -228,19 +235,25 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           }
           firstAdmission = null; // One admission attempt, including failed join or reconnect.
         }
+        if (Object.hasOwn(msg,'roleProtocol') && msg.roleProtocol !== 1) throw new Error('Unknown role protocol');
+        if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
+        if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k))) throw new Error('Invalid role admission');
         let code = String(msg.code ?? '').toUpperCase();
         let room;
         if (msg.type === 'create') {
           if (!(['battlefield', 'battle'].includes(msg.mode) ? ['commander'] : ['driver', 'gunner']).includes(msg.role)) throw new Error('Unknown role');
           if (msg.mode === 'battle') { validateBattleOptions(msg); battleFormat(msg.format); }
+          if(Object.hasOwn(msg,'roleId') && msg.roleProtocol!==1)throw new Error('Role trial unavailable');
+          if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? createOnlineBattle({ tankId: msg.tankId, format: msg.format }) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.
         if ((msg.mode ?? 'range') !== room.mode) throw new Error('Room mode mismatch. Open the matching range, slope, solo or battle link.');
         if (room.mode === 'battle' && battleFormat(msg.format) !== room.format) throw new Error('Room format mismatch. Open the matching 2v2 or 4v4 link.');
+        if(msg.roleProtocol===1 && !room.selectRole)throw new Error('Role protocol mismatch');
         let token, role;
         if (msg.type === 'reconnect') {
           if (hosted && owners.get(room.seat(msg.token)[1]) !== admission.subject) {
@@ -251,7 +264,9 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if (hosted && Object.values(room.seats).some(player => owners.get(player) === admission.subject)) {
             throw new Error('This identity already has a tank in the room');
           }
-          role = msg.role; token = room.join(role, msg);
+          role = msg.role;
+          if (room.selectRole) { if(Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k)))throw new Error('Invalid role admission'); const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];token=room.join(role,options); }
+          else { if(Object.hasOwn(msg,'roleId'))throw new Error('Role trial unavailable'); token = room.join(role, msg); }
           if (hosted) owners.set(room.seat(token)[1], admission.subject);
         }
         if (hostedAccess && msg.type === 'create') hostedAccess.roomOpened(code);

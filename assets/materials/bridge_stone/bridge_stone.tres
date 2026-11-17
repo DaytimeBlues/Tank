@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+[ext_resource type="Shader" path="res://assets/materials/bridge_stone/bridge_stone.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/materials/concrete_floor_02/concrete_diff.jpg" id="2"]
+[resource]
+resource_name = "Bridge Stone - restrained original study palette"
+shader = ExtResource("1")
+shader_parameter/stone_colour = Color(0.38, 0.40, 0.41, 1)
+shader_parameter/detail_strength = 0.055
+shader_parameter/stone_roughness = 0.94
+shader_parameter/detail_map = ExtResource("2")

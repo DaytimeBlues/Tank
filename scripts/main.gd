@@ -1,17 +1,25 @@
 extends Node3D
 
+var accepted_guide: Node3D
+var guide_snapshot_msec := -1
+const GUIDE_MAX_AGE_MSEC := 1000
+
 var arena: TankArenaView
 var transport := TankPortTransport.new()
 var camera: Camera3D
+const TrackVisual = preload("res://scripts/track_tank_view.gd")
 var peers: Dictionary = {}
 var old_shots: Dictionary = {}
 var effects: Array = []
 var shot_effects: TankAcceptedShotEffects
+var projectile_view: Node3D
 var state: Dictionary = {}
 var status_label: Label
 var stats_label: Label
 var room_field: LineEdit
 var port_field: LineEdit
+const ROLE_IDS = ["prototype","flanker","generalist","anchor"]
+var role_selector: OptionButton
 var roster: OptionButton
 var ready_button: Button
 var start_button: Button
@@ -21,6 +29,7 @@ var panel: PanelContainer
 var hud_panel: PanelContainer
 var paused_controls := false
 var controls_blocked := false
+var input_gate = preload("res://scripts/input_gate.gd").new()
 var window_focused := true
 var input_elapsed := 0.0
 var camera_seeded := false
@@ -37,9 +46,22 @@ var presentation_preparation_complete := false
 var presentation_prepared := false
 
 func _ready() -> void:
+	accepted_guide = preload("res://scripts/accepted_gun_guide.gd").new()
+	add_child(accepted_guide)
 	var environment := WorldEnvironment.new()
 	var settings := Environment.new()
-	settings.background_mode = Environment.BG_COLOR
+	settings.background_mode = Environment.BG_SKY
+	# Reuse the 16 Nov native sky study, without its rejected apron/skirt.
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color("5b7e96")
+	sky_material.sky_horizon_color = Color("c6cbc2")
+	sky_material.ground_bottom_color = Color("535b4b")
+	sky_material.ground_horizon_color = Color("c6cbc2")
+	sky_material.sky_curve = 0.2
+	sky_material.sun_angle_max = 4.0
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	settings.sky = sky
 	settings.background_color = Color("8b9d9d")
 	settings.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	settings.ambient_light_color = Color("c6d1c6")
@@ -54,11 +76,15 @@ func _ready() -> void:
 	add_child(light)
 	shot_effects = TankAcceptedShotEffects.new(self)
 	effects = shot_effects.active
+	projectile_view = preload("res://scripts/projectile_view.gd").new()
+	projectile_view.fx = shot_effects
+	add_child(projectile_view)
 	arena = TankArenaView.new()
 	arena.name = "Arena"
 	add_child(arena)
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/arena.json"))
 	arena.build(data)
+	_dress_arena(data)
 	camera = Camera3D.new()
 	camera.fov = 55.0
 	camera.far = 650.0
@@ -71,12 +97,15 @@ func _ready() -> void:
 	shot_effects.scene_startup_finished.connect(func(ok: bool):
 		if ok: status_label.text = "Preparing shot feedback."
 	)
-	controls_blocked = true
+	_suspend_controls()
 	for button in connect_buttons: button.disabled = true
 	transport.joined.connect(func(code: String):
+		_reset_track_histories()
+		guide_snapshot_msec = -1
+		accepted_guide.hide()
 		room_field.text = code
 		camera_seeded = false
-		controls_blocked = true
+		_suspend_controls()
 		# The immediate legacy format has no trees; render its actual authoritative map.
 		if transport.map_data.get("version",0) != arena.source_data.get("version",0):
 			remove_child(arena)
@@ -85,6 +114,7 @@ func _ready() -> void:
 			arena.name = "Arena"
 			add_child(arena)
 			arena.build(transport.map_data)
+			_dress_arena(transport.map_data)
 		status_label.text = "Seat acknowledged. Waiting for its authoritative snapshot."
 	)
 	transport.state_received.connect(_accept_state)
@@ -118,11 +148,11 @@ func _button(text: String, parent: Node, callback: Callable) -> Button:
 	result.text = text
 	result.pressed.connect(func():
 		if not presentation_prepared:
-			controls_blocked = true
+			_suspend_controls()
 			_neutral()
 			return
 		callback.call()
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 		get_viewport().gui_release_focus()
 	)
@@ -172,12 +202,22 @@ func _build_ui() -> void:
 		roster.add_item(id.capitalize())
 	content.add_child(roster)
 	roster.item_selected.connect(func(_index: int): get_viewport().gui_release_focus())
+	role_selector = OptionButton.new()
+	for label in ["Standard: 3.0 m/s", "Flanker trial: 3.6 m/s", "Generalist: 3.0 m/s", "Anchor trial: 2.4 m/s"]: role_selector.add_item(label)
+	content.add_child(role_selector)
+	role_selector.item_selected.connect(func(index: int):
+		get_viewport().gui_release_focus()
+		if transport.is_seated() and state.get("roleProtocol",0) == 1 and state.get("staging",{}).get("waiting",false):
+			transport.send({"type":"selectRole","roleId":ROLE_IDS[index]})
+			role_selector.select(maxi(0,ROLE_IDS.find(own_player().get("roleId","prototype"))))
+	)
 	for field in [port_field,room_field]:
 		field.text_submitted.connect(func(_text: String): get_viewport().gui_release_focus())
 	status_label = _label("Teacher: create a room. Students: enter its code and join. Both teams must mark Ready before the host starts.",content)
 	var buttons := HFlowContainer.new()
 	content.add_child(buttons)
 	connect_buttons.append(_button("Teacher: Create room",buttons,func(): _connect_room("create","4v4")))
+	connect_buttons.append(_button("Create handling trial",buttons,func(): _connect_room("create","4v4",true)))
 	connect_buttons.append(_button("Join room",buttons,func(): _connect_room("join","4v4")))
 	roster_label = _label("Room roster will appear here. No student names or email accounts are needed.",content)
 	var ready_row := HFlowContainer.new()
@@ -197,7 +237,7 @@ func _build_ui() -> void:
 	rematch_button = _button("Rematch",ready_row,func(): transport.send({"type":"restart"}))
 	_button("Controls / Resume",ready_row,func():
 		paused_controls = not paused_controls
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 		_show_room_panel()
 	)
@@ -257,19 +297,26 @@ func _show_room_panel() -> void:
 static func normalized_bearing(offset: Vector2) -> float:
 	return atan2(offset.x,offset.y)/PI
 
-func _connect_room(kind: String, format_value: String) -> void:
+func _connect_room(kind: String, format_value: String, role_trial: bool = false) -> void:
 	if not presentation_prepared:
-		controls_blocked = true
+		_suspend_controls()
 		input_elapsed = 0
 		status_label.text = "Shot feedback could not prepare. Reload this page to retry." if presentation_preparation_complete else "Preparing shot feedback."
 		_neutral()
 		return
 	for button in connect_buttons: button.disabled = true
 	var request := {"type":kind,"mode":"battle","format":format_value,"role":"commander","team":"auto","visualId":TankPortVisual.IDS[roster.selected],"tankId":"prototype"}
+	if role_trial:
+		request["roleProtocol"] = 1
+		request["roleId"] = ROLE_IDS[role_selector.selected]
 	if kind == "join": request["code"] = room_field.text.strip_edges().to_upper()
 	state = {}
+	_reset_track_histories()
+	guide_snapshot_msec = -1
+	accepted_guide.hide()
 	old_shots.clear()
 	shot_effects.clear()
+	projectile_view.clear()
 	camera_seeded = false
 	status_label.text = "Connecting to the room."
 	var error: Error = transport.open_browser(request) if OS.has_feature("web") else transport.open_local(_backend_url(),request)
@@ -282,11 +329,16 @@ func own_player() -> Dictionary:
 	return {}
 
 func _network_error(message: String) -> void:
+	role_selector.disabled = transport.is_recovering()
+	_reset_track_histories()
+	guide_snapshot_msec = -1
+	if is_instance_valid(accepted_guide): accepted_guide.hide()
 	status_label.text = message
-	controls_blocked = true
+	_suspend_controls()
 	state = {}
 	old_shots.clear()
 	shot_effects.clear()
+	projectile_view.clear()
 	stats_label.text = "Disconnected. Controls are neutral. Recovering the same seat for up to 22 seconds." if transport.is_recovering() else "Connection stopped. Check the room code and join again. If access expired, return to Private access."
 	ready_button.disabled = true
 	start_button.disabled = true
@@ -295,24 +347,38 @@ func _network_error(message: String) -> void:
 	for button in connect_buttons: button.disabled = not presentation_prepared or transport.is_recovering()
 	_show_room_panel()
 
+func _reset_track_histories() -> void:
+	for visual in peers.values():
+		if is_instance_valid(visual): visual.reset_track_history()
+
 func _accept_state(snapshot: Dictionary) -> void:
 	if not presentation_prepared: return
+	# Source-clock discontinuity or long snapshot gap: do not infer tread travel.
+	var old_time: float = float(state.get("time",-1))
+	var new_time: float = float(snapshot.get("time",0))
+	if state.is_empty() or new_time < old_time or new_time-old_time > 1.0 or snapshot.get("staging",{}).get("waiting",false) or state.get("staging",{}).get("waiting",false):
+		_reset_track_histories()
 	state = snapshot
+	projectile_view.accept(snapshot,float(Time.get_ticks_msec())/1000.0)
+	guide_snapshot_msec = Time.get_ticks_msec()
 	map_view.update_map(snapshot,arena.source_data)
 	var active_ids: Array = []
 	for player in state.players:
 		active_ids.append(player.id)
 		if not peers.has(player.id):
-			var visual := TankPortVisual.new()
+			var visual := TrackVisual.new()
 			add_child(visual)
 			peers[player.id] = visual
 		var visual: TankPortVisual = peers[player.id]
+		if not player.get("connected",true): visual.reset_track_history()
 		visual.apply_player(player,player.id == state.playerId)
+		if not player.get("connected",true) or state.get("staging",{}).get("waiting",false): visual.reset_track_history()
 		var shot = player.get("shot")
 		if shot is Dictionary:
 			if old_shots.has(player.id) and shot.id > old_shots[player.id] and state.time-shot.time >= 0 and state.time-shot.time < 0.35:
 				visual.recoil_age = 0
 				_present_shot(shot)
+				projectile_view.boom(Vector3(shot.x,shot.y,shot.z))
 			old_shots[player.id] = maxi(int(old_shots.get(player.id,0)),int(shot.id))
 		elif not old_shots.has(player.id): old_shots[player.id] = 0
 	for id in peers.keys():
@@ -320,9 +386,17 @@ func _accept_state(snapshot: Dictionary) -> void:
 			peers[id].queue_free()
 			peers.erase(id)
 			old_shots.erase(id)
+	_update_accepted_guide()
 	arena.update_bases(state.capture.bases)
 	var waiting: bool = state.get("staging",{}).get("waiting",false)
 	var own := own_player()
+	role_selector.disabled = not waiting or state.get("roleProtocol",0) != 1
+	for entry in state.get("roleCatalog",[]):
+		if entry is Dictionary and entry.get("id") in ROLE_IDS and (entry.get("forwardMps") is float or entry.get("forwardMps") is int):
+			var index: int = ROLE_IDS.find(entry.id)
+			role_selector.set_item_text(index,str(entry.id).capitalize()+" trial: "+str(entry.forwardMps)+" m/s")
+	var accepted_role: int = ROLE_IDS.find(own.get("roleId","prototype"))
+	role_selector.select(maxi(0,accepted_role))
 	ready_button.disabled = not waiting
 	start_button.disabled = not state.get("staging",{}).get("canStart",false)
 	rejoin_button.disabled = transport.room_code.is_empty()
@@ -337,27 +411,40 @@ func _accept_state(snapshot: Dictionary) -> void:
 			members.append(str(player.id).to_upper()+ (" (you)" if player.id == state.playerId else "")+ (" [host]" if player.id == state.hostId else "")+ (" · reserved" if not player.connected else " · Ready" if player.get("ready",false) else " · not ready" if waiting else ""))
 		lines.append(team.to_upper()+" %d/4: " % members.size()+", ".join(members))
 	roster_label.text = "\n".join(lines)
+	if state.get("roleProtocol",0) == 1:
+		roster_label.text += "\nHandling trial: your accepted role is "+str(own.get("roleId","prototype"))+". Combat unchanged: 3 HP, 1 damage, 4 s reload."
 	if state.get("won",false) and not previous_won:
 		paused_controls = true
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 	if previous_won and not state.get("won",false):
 		paused_controls = false
-		controls_blocked = true
+		_suspend_controls()
 		camera_seeded = false
 	previous_won = state.get("won",false)
 	_show_room_panel()
 	for button in connect_buttons: button.disabled = true
 	if own.is_empty(): return
 	if own.health > 0 and not previous_alive: camera_seeded = false
+	if (own.health > 0) != previous_alive: _suspend_controls()
 	previous_alive = own.health > 0
 	var weapon := "Ready" if own.health > 0 and own.tank.reload <= 0 else "Reload %.1fs" % own.tank.reload
 	if own.health <= 0: weapon = "Scrapped · respawn %.1fs" % own.respawnSeconds
 	if state.get("won",false): weapon = "Match complete"
 	var objective := "Capture all seven bases. M: map · Esc: menu"
+	var nearest_base: Dictionary = {}
+	var nearest_distance := INF
 	for base in state.capture.bases:
-		if Vector2(own.tank.x-base.x,own.tank.z-base.z).length() <= base.radius+5:
-			objective = "%s · %s · %s" % [str(base.id)+" "+base.name,str(base.owner).capitalize()+" holds" if base.owner != "neutral" else "Neutral", "Contested" if base.get("contested",false) else "Blue taking" if base.net > 0 else "Red taking" if base.net < 0 else "Hold the circle"]
+		var distance := Vector2(own.tank.x-base.x,own.tank.z-base.z).length()
+		if distance <= base.radius+5 and distance < nearest_distance:
+			nearest_base = base
+			nearest_distance = distance
+	if not nearest_base.is_empty():
+		var base := nearest_base
+		var action := "Contested" if base.get("contested",false) else "Blue taking" if base.net > 0 and base.get("progress",0) < 1 else "Red taking" if base.net < 0 and base.get("progress",0) > -1 else "Hold the circle"
+		if nearest_distance > base.radius: action = "Enter the circle to help capture"
+		elif base.owner == own.team and ((own.team == "blue" and base.get("progress",0) >= 1 and base.net >= 0) or (own.team == "red" and base.get("progress",0) <= -1 and base.net <= 0)) and not base.get("contested",false): action = "Secured · advance or defend"
+		objective = "%s · %s · %s" % [str(base.id)+" "+base.name,str(base.owner).capitalize()+" holds" if base.owner != "neutral" else "Neutral",action]
 	if state.get("won",false): objective = str(state.winner).to_upper()+" WINS · Host: choose Rematch"
 	stats_label.text = "%s · Hull %d/3 · %.1f km/h\nCannon: %s · Bases Blue %d / Red %d\n%s" % [str(own.team).to_upper(),own.health,absf(own.tank.speed)*3.6,weapon,state.scores.blue,state.scores.red,objective]
 	# Waiting snapshots can retain zero health after Rematch; this is not a live death.
@@ -373,6 +460,56 @@ func _present_shot(shot: Dictionary) -> void:
 	# This receives only accepted new shots from _accept_state, not local fire input.
 	shot_effects.present(shot,float(Time.get_ticks_msec())/1000.0)
 	shot_effects.update(float(Time.get_ticks_msec())/1000.0,camera)
+	projectile_view.update(float(Time.get_ticks_msec())/1000.0)
+
+const CONTROL_KEYS = {KEY_W:"w", KEY_S:"s", KEY_A:"a", KEY_D:"d", KEY_LEFT:"left", KEY_RIGHT:"right", KEY_SPACE:"space"}
+
+func _raw_controls() -> Dictionary:
+	var raw := {}
+	for key in CONTROL_KEYS: raw[CONTROL_KEYS[key]] = Input.is_physical_key_pressed(key)
+	raw["mouse1"] = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	return raw
+
+func _suspend_controls() -> void:
+	controls_blocked = true
+	input_gate.suspend(_raw_controls())
+
+func _controls_eligible() -> bool:
+	if not presentation_prepared or not transport.is_seated() or not window_focused or paused_controls: return false
+	if OS.has_feature("web") and not transport.browser_info().get("visible",false): return false
+	if get_viewport().gui_get_focus_owner() != null or state.get("won",false) or state.get("staging",{}).get("waiting",false): return false
+	return own_player().get("health",0) > 0
+
+func _pointer_over_ui(position: Vector2) -> bool:
+	return (panel != null and panel.visible and panel.get_global_rect().has_point(position)) or (hud_panel != null and hud_panel.get_global_rect().has_point(position)) or (toolbar != null and toolbar.get_global_rect().has_point(position)) or (map_view != null and map_view.visible and map_view.get_global_rect().has_point(position))
+
+func _input(event: InputEvent) -> void:
+	# Observe releases before GUI consumption. Authorization remains separate.
+	var key := ""
+	var pressed := false
+	var echo := false
+	if event is InputEventKey and CONTROL_KEYS.has(event.physical_keycode):
+		key = CONTROL_KEYS[event.physical_keycode]
+		pressed = event.pressed
+		echo = event.echo
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		key = "mouse1"
+		pressed = event.pressed
+	if key.is_empty(): return
+	if not pressed:
+		input_gate.edge(key,false)
+		return
+	if not _controls_eligible() or (key == "mouse1" and _pointer_over_ui(event.position)):
+		_suspend_controls()
+	else:
+		input_gate.resume()
+	input_gate.edge(key,true,echo)
+	# A short fire tap must not be lost between the 20Hz periodic input sends.
+	if not echo and key in ["space","mouse1"] and _controls_eligible() and (not event is InputEventMouseButton or not _pointer_over_ui(event.position)):
+		if input_gate.command().fire: _send_fire_edge(input_gate.command())
+
+func _send_fire_edge(command: Dictionary) -> void:
+	transport.send({"type":"input","input":command})
 
 func _neutral() -> void:
 	transport.send({"type":"input","input":{"throttle":0,"steer":0,"aim":0,"fire":false}})
@@ -380,38 +517,55 @@ func _neutral() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		window_focused = false
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 	elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
 		window_focused = true
-		controls_blocked = true
+		_suspend_controls()
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
 		paused_controls = not paused_controls
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 		_show_room_panel()
 	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_M:
 		map_enabled = not map_enabled
 		map_view.visible = map_enabled
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and not panel.get_global_rect().has_point(event.position):
 		get_viewport().gui_release_focus()
 
+func _update_accepted_guide() -> void:
+	if not is_instance_valid(accepted_guide): return
+	accepted_guide.hide()
+	var age := Time.get_ticks_msec()-guide_snapshot_msec
+	if not presentation_prepared or not transport.is_seated() or guide_snapshot_msec < 0 or age < 0 or age > GUIDE_MAX_AGE_MSEC: return
+	if state.get("staging",{}).get("waiting",true) or state.get("won",false): return
+	var own := own_player()
+	if own.is_empty() or not own.get("connected",false) or own.get("health",0) <= 0: return
+	accepted_guide.update_from_visual(peers.get(own.id),true,true)
+
 func _process(delta: float) -> void:
+	_update_accepted_guide()
 	if not presentation_prepared:
-		controls_blocked = true
+		_suspend_controls()
 		input_elapsed = 0
 		_neutral()
 		return
 	transport.poll()
+	if not _controls_eligible():
+		_suspend_controls()
+	else:
+		input_gate.resume()
+		controls_blocked = not input_gate.blocked.is_empty()
 	shot_effects.update(float(Time.get_ticks_msec())/1000.0,camera)
+	projectile_view.update(float(Time.get_ticks_msec())/1000.0)
 	if OS.has_feature("web") and not transport.browser_info().get("visible",false):
-		controls_blocked = true
+		_suspend_controls()
 		_neutral()
 	var own := own_player()
 	if not own.is_empty() and peers.has(own.id):
@@ -424,20 +578,42 @@ func _process(delta: float) -> void:
 	input_elapsed += delta
 	if input_elapsed < 0.05 or own.is_empty(): return
 	input_elapsed = 0
-	var throttle := float(Input.is_physical_key_pressed(KEY_W))-float(Input.is_physical_key_pressed(KEY_S))
-	var steer := float(Input.is_physical_key_pressed(KEY_A))-float(Input.is_physical_key_pressed(KEY_D))
-	var aim := float(Input.is_physical_key_pressed(KEY_LEFT))-float(Input.is_physical_key_pressed(KEY_RIGHT))
-	var fire := Input.is_physical_key_pressed(KEY_SPACE) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var ui_focus := get_viewport().gui_get_focus_owner() != null
-	var mouse_position := get_viewport().get_mouse_position()
-	var over_ui := (panel.visible and panel.get_global_rect().has_point(mouse_position)) or hud_panel.get_global_rect().has_point(mouse_position) or toolbar.get_global_rect().has_point(mouse_position) or (map_view.visible and map_view.get_global_rect().has_point(mouse_position))
-	if throttle == 0 and steer == 0 and aim == 0 and not fire: controls_blocked = false
-	if not transport.is_seated() or not window_focused or (OS.has_feature("web") and not transport.browser_info().get("visible",false)) or paused_controls or controls_blocked or ui_focus or (over_ui and fire) or state.get("won",false):
+	var command: Dictionary = input_gate.command()
+	var aim: float = command.aim
+	var over_ui := _pointer_over_ui(get_viewport().get_mouse_position())
+	if not _controls_eligible():
+		_suspend_controls()
 		_neutral()
 		return
-	var command := {"throttle":throttle,"steer":steer,"aim":aim,"fire":fire}
-	if aim == 0 and not over_ui:
+	if over_ui: command.fire = input_gate.value("space") > 0
+	if aim == 0 and not over_ui and input_gate.pointer_aim_allowed():
 		var mouse := get_viewport().get_mouse_position()
 		var point = Plane(Vector3.UP,own.tank.y).intersects_ray(camera.project_ray_origin(mouse),camera.project_ray_normal(mouse))
 		if point is Vector3: command["bearing"] = normalized_bearing(Vector2(point.x-own.tank.x,point.z-own.tank.z))
 	transport.send({"type":"input","input":command})
+
+func _dress_arena(data: Dictionary) -> void:
+	# Bounds-fitted, spatially batched crowns preserve trunks and server collision.
+	for child in arena.get_children():
+		if child is MeshInstance3D and child.has_meta("original_tree_crown"): child.hide()
+	var crowns = load("res://scripts/meshy_crown_view.gd").new()
+	crowns.name = "MeshyCrownClusters"
+	crowns.build(data)
+	arena.add_child(crowns)
+	arena.add_child(load("res://assets/map_dressing.tscn").instantiate())
+	arena.add_child(load("res://assets/close_detail.tscn").instantiate())
+	var verges = load("res://scripts/north_verge_view.gd").new()
+	verges.name = "NorthVergeClusters"
+	arena.add_child(verges)
+	var ground_factory = load("res://scripts/road_wear_material.gd")
+	for chunk in data.get("chunks",[]):
+		var mesh = arena.get_node_or_null(NodePath(str(chunk.id)))
+		if mesh is MeshInstance3D: mesh.set_surface_override_material(0,ground_factory.create_for_chunk(data,chunk))
+
+	var water_material := ShaderMaterial.new()
+	water_material.shader = load("res://assets/river_surface.gdshader")
+	for child in arena.get_children():
+		if child is MeshInstance3D and child.has_meta("river_surface"): child.material_override = water_material
+	for child in arena.get_node("MapDressing/ScenicPerimeter").get_children():
+		if child is MeshInstance3D and child.mesh is ArrayMesh and child.mesh.get_aabb().size.y < 0.01:
+			child.material_override = water_material

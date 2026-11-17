@@ -1,7 +1,7 @@
 class_name TankPortVisual
 extends Node3D
 
-const IDS := ["kestrel","bastion","foundry","palisade"]
+const IDS := ["kestrel","bastion","foundry","palisade","leichttraktor"]
 var visual_id := ""
 var model: Node3D
 var turret: Node3D
@@ -41,6 +41,7 @@ func apply_player(player: Dictionary, own: bool) -> void:
 	turret.rotation.y = tank.turret
 	visible = player.health > 0
 	label.text = "%s%s · %s/3" % ["YOU · " if own else "",str(player.team).to_upper(),player.health]
+	label.visible = not own # Own health/team already live in the HUD; leave aiming unobstructed.
 	label.modulate = Color("85c6ed") if player.team == "blue" else Color("ee9980")
 
 func _process(delta: float) -> void:

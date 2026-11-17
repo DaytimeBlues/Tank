@@ -1,11 +1,14 @@
+import { installRoadsideCover } from './roadside-cover.mjs';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { BATTLEFIELD_MAP,terrainHeight } from './battlefield-map.mjs';
 import { createHull,rotate,differentialStep } from './suspension.mjs';
 import { muzzle } from './terrain-query.mjs';
 import { tankProfile } from '../public/tank-config.mjs';
+import { modelGunProfile } from '../public/model-gun.mjs';
 export const BATTLE_SHOT_RANGE = 90;
 export class BattlefieldDrive {
- constructor(profile='prototype',shared=null,map=BATTLEFIELD_MAP){
+ constructor(profile='prototype',shared=null,map=BATTLEFIELD_MAP,visualId='kestrel'){
+  modelGunProfile(visualId);Object.defineProperty(this,'visualId',{value:visualId,enumerable:true});
   this.map=shared?.map??map;this.profile=tankProfile(profile);this.driveSpeed=this.profile.forwardMps;
   if(shared){for(const key of ['world','supportHandles','bridgeColliders','waterBlockers','ground','targets','targetColliders'])this[key]=shared[key];}
   else {
@@ -15,6 +18,7 @@ export class BattlefieldDrive {
   for(const w of this.map.walls)this.world.createCollider(RAPIER.ColliderDesc.cuboid(w.w/2,5,w.d/2).setTranslation(w.x,3,w.z));
   for(const b of this.map.blockers){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(b.w/2,b.h/2,b.d/2).setTranslation(b.x,b.y,b.z));this.waterBlockers.add(c.handle);}
   for(const t of this.map.trees??[])this.world.createCollider(RAPIER.ColliderDesc.cylinder(t.trunkHeight/2,t.radius).setTranslation(t.x,t.y+t.trunkHeight/2,t.z));
+  installRoadsideCover(RAPIER,this.world,this.map.cover??[]);
   this.targets=[[-120,-110],[-130,-110],[-110,-110]].map(([x,z],i)=>({id:i+1,x,z,y:terrainHeight(x,z)+1,hp:3}));for(const [baseId,offset] of [['5',-8],['7',-8],['7',8]]){const b=this.map.bases.find(b=>b.id===baseId);this.targets.push({id:this.targets.length+1,x:b.x+offset,z:b.z,y:b.y+1,hp:3,captureTeam:'red',baseId});}this.targetColliders=new Map();
   for(const t of this.targets){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(1.5,1,.5).setTranslation(t.x,t.y,t.z));this.targetColliders.set(c.handle,t);}
   }
@@ -33,9 +37,16 @@ export class BattlefieldDrive {
  occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
  garrisonOccupants(){return this.targets.filter(t=>t.captureTeam).map(t=>({id:'post-'+t.id,team:t.captureTeam,x:t.x,y:t.y,z:t.z,alive:t.hp>0,eligible:true,grounded:true}));}
  cast(turret,range=BATTLE_SHOT_RANGE){
-  const m=muzzle(this.pose(),turret),ray=new RAPIER.Ray(m.origin,m.direction);
+  const m=muzzle(this.pose(),turret,this.visualId),ray=new RAPIER.Ray(m.origin,m.direction);
   const vertical=this.world.castRay(new RAPIER.Ray({x:m.origin.x,y:100,z:m.origin.z},{x:0,y:-1,z:0}),200,true,undefined,undefined,undefined,this.body,c=>this.supportHandles.has(c.handle));
   if(vertical&&m.origin.y<=100-vertical.timeOfImpact+.0001)return {origin:m.origin,direction:m.direction,distance:0,category:'terrain',target:null};
+  // Donor only: reject obstruction between turret-plane mount and socket. Keep the accepted
+  // event at the physical muzzle with zero distance; never damage a target behind that muzzle.
+  if(m.mount){
+   const d={x:m.origin.x-m.mount.x,y:m.origin.y-m.mount.y,z:m.origin.z-m.mount.z},length=Math.hypot(d.x,d.y,d.z);
+   const guard=this.world.castRay(new RAPIER.Ray(m.mount,{x:d.x/length,y:d.y/length,z:d.z/length}),length+.0001,true,undefined,undefined,undefined,this.body,c=>!this.waterBlockers.has(c.handle));
+   if(guard)return {origin:m.origin,direction:m.direction,distance:0,category:'mount-obstruction',target:null};
+  }
   const hit=this.world.castRay(ray,range,true,undefined,undefined,undefined,this.body,c=>!this.waterBlockers.has(c.handle));
   const candidate=hit&&this.targetColliders.get(hit.collider.handle),target=candidate?.hp>0?candidate:null;
   return {origin:m.origin,direction:m.direction,distance:hit?.timeOfImpact??range,category:target?'target':hit?'terrain':null,target:target??null,...(hit?.collider.parent()?{bodyHandle:hit.collider.parent().handle}:{})};

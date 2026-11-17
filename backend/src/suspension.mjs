@@ -35,11 +35,39 @@ export function createHull(world, lateralGrip = 1) {
 // Centre rays retain lateral grip while fore/aft rays slip for yaw; neutral restores
 // all six grips. Gravity feed-forward during turning and neutral hold prevents
 // the assisted drive from becoming a downhill command on an incline.
+// A six-ray surrogate can belly on a bridge lip while one track loses support.
+// Do not let passive chassis friction pin the surviving driven track in place.
+// Only lower friction for an actual supporting bridge manifold during a command;
+// no force, pose, collision shape, map geometry or neutral braking is changed.
+function bridgeBellyGrip(grade, commanded) {
+  const {body, vehicle, world, bridgeColliders} = grade;
+  const hull = body.collider(0);
+  if (!hull || !bridgeColliders) return;
+  grade.hullGripBase ??= {friction:hull.friction(), rule:hull.frictionCombineRule()};
+  let wheels=0;
+  for(let i=0;i<vehicle.numWheels();i++)if(vehicle.wheelIsInContact(i))wheels++;
+  let supportedBridge=false, obstruction=false;
+  if(commanded && wheels>0 && wheels<=3){
+    world.contactPairsWith(hull, other=>{
+      world.contactPair(hull,other,(manifold,flipped)=>{
+        if(!manifold.numSolverContacts())return;
+        const isBridge=[...bridgeColliders.values()].some(c=>c.handle===other.handle);
+        if(isBridge && manifold.normal().y*(flipped?1:-1)>.65)supportedBridge=true;
+        if(!grade.supportHandles?.has(other.handle))obstruction=true;
+      });
+    });
+  }
+  const assisted=supportedBridge&&!obstruction;
+  hull.setFriction(assisted ? 0.1 : grade.hullGripBase.friction);
+  hull.setFrictionCombineRule(assisted?RAPIER.CoefficientCombineRule.Min:grade.hullGripBase.rule);
+}
+
 export function differentialStep(grade, dt, throttle, steer, grip = 0.05, stepWorld = true) {
   const { body, vehicle, world } = grade;
   const q = body.rotation(), p = body.translation(), f = rotate(q, { x: 0, y: 0, z: 1 });
   const braking = (!throttle && !steer) || grade.stage === 'complete';
   const activeSteer = braking ? 0 : steer;
+  bridgeBellyGrip(grade,!braking && !!(throttle||steer));
   for (let i = 0; i < vehicle.numWheels(); i++) {
     const local = vehicle.wheelChassisConnectionPointCs(i), r = rotate(q, local);
     const v = body.velocityAtPoint({ x: p.x + r.x, y: p.y + r.y, z: p.z + r.z });

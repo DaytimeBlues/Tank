@@ -1,0 +1,10 @@
+{
+  "asset": "Poly Haven concrete_floor_02",
+  "author": "Rob Tuytel",
+  "source": "https://polyhaven.com/a/concrete_floor_02",
+  "license": "CC0-1.0",
+  "license_url": "https://polyhaven.com/license",
+  "included": "concrete_diff.jpg only, 1024x1024",
+  "sha256": "6db84a6d87dc50508b9d134d6fbd2b7e876b8081a5f43a118a249ca18de73af5",
+  "use": "5.5 percent achromatic grain in original authored stone shader; no normal or roughness textures"
+}

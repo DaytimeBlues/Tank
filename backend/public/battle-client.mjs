@@ -1,3 +1,4 @@
+import { canPresentBattleVisuals } from './tank-visual.mjs';
 export function battleWeaponPresentation(own, winner) {
   if (winner) return { text: 'Match complete', value: 0, label: 'Cannon unavailable: match complete' };
   if (!own?.connected) return { text: 'Disconnected', value: 0, label: 'Cannon unavailable: disconnected' };
@@ -63,6 +64,7 @@ export function createBattleClient({ THREE, scene, doc, bank, primitive, camera,
     labels.get(id)?.remove(); labels.delete(id); leaders.get(id)?.remove(); leaders.delete(id);
   }
   function update(state) {
+    if(!canPresentBattleVisuals(bank,state.players))throw new Error('Required tank asset unavailable');
     latest = state;
     const aliveIds = new Set(state.players.map(p => p.id));
     for (const id of labels.keys()) if (!aliveIds.has(id)) remove(id);

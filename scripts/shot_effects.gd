@@ -17,6 +17,8 @@ signal preparation_finished(ok: bool)
 signal scene_startup_finished(ok: bool)
 var scene_startup_report: Dictionary = {}
 const SCENE_STARTUP_TIMEOUT_MS := 20000
+var preparation_retry_used := false
+var preparation_attempt_history: Array = []
 var preparation_started := false
 var preparation_complete := false
 var preparation_report: Dictionary = {}
@@ -90,6 +92,21 @@ func _prepare_first_scene() -> bool:
 	scene_startup_finished.emit(success)
 	return success
 
+func _prepare_scene_startup() -> bool:
+	var scene_ok := await _prepare_first_scene()
+	var scene_attempt_history: Array = [scene_startup_report.duplicate(true)]
+	# A first shader/scene draw can return late on Web. Retry only that completed
+	# draw once; preserve both deadlines and never admit an unverified scene.
+	if not scene_ok and scene_startup_report.get("reason","") == "LATE_SCENE_DRAW_TIMEOUT" and is_instance_valid(parent) and parent.is_inside_tree():
+		scene_ok = await _prepare_first_scene()
+		scene_attempt_history.append(scene_startup_report.duplicate(true))
+	scene_startup_report["attemptHistory"] = scene_attempt_history
+	scene_startup_report["recoveredAfterLateDraw"] = scene_ok and scene_attempt_history.size() == 2
+	return scene_ok
+
+static func can_retry_late_effect(report: Dictionary, already_retried: bool) -> bool:
+	return not already_retried and report.get('phase','') == 'EFFECT_VERIFICATION' and report.get('reason','') == 'LATE_DRAW_TIMEOUT' and not report.get('success',false)
+
 static func scene_startup_result_on_time(verified: bool, elapsed_ms: int) -> bool:
 	return verified and elapsed_ms >= 0 and elapsed_ms < SCENE_STARTUP_TIMEOUT_MS
 
@@ -110,7 +127,7 @@ func prepare() -> bool:
 		preparation_complete = true
 		preparation_finished.emit(true)
 		return true
-	var scene_ok := await _prepare_first_scene()
+	var scene_ok := await _prepare_scene_startup()
 	if not scene_ok:
 		preparation_report = {"status":"FAILED","success":false,"phase":"SCENE_STARTUP","reason":scene_startup_report.reason,"drawnMaterials":0,"temporaryNodes":0,"retired":true,"sceneStartup":scene_startup_report,"totalElapsedMs":Time.get_ticks_msec()-total_started}
 		preparation_complete = true
@@ -215,6 +232,13 @@ func prepare() -> bool:
 	if reason.is_empty() and not preparation_result_on_time(verified,elapsed_ms): reason = "RETIREMENT_TIMEOUT"
 	var success := preparation_result_on_time(verified,elapsed_ms) and reason.is_empty()
 	preparation_report = {"status":"DRAW_VERIFIED" if success else "FAILED","success":success,"reason":reason,"drawnMaterials":verified,"drawCalls":draws,"attempts":attempts,"size":[80,64],"temporaryNodes":19,"retired":true,"elapsedMs":elapsed_ms,"deadlineMs":PREPARATION_TIMEOUT_MS,"deadlineOverrunMs":maxi(0,elapsed_ms-PREPARATION_TIMEOUT_MS),"samples":samples,"phase":"EFFECT_VERIFICATION","sceneStartup":scene_startup_report,"totalElapsedMs":Time.get_ticks_msec()-total_started}
+	preparation_attempt_history.append(preparation_report.duplicate(true))
+	if can_retry_late_effect(preparation_report,preparation_retry_used):
+		preparation_retry_used = true
+		preparation_started = false
+		return await prepare()
+	preparation_report["attemptHistory"] = preparation_attempt_history
+	preparation_report["recoveredAfterLateDraw"] = success and preparation_retry_used
 	preparation_complete = true
 	preparation_finished.emit(success)
 	return success
@@ -276,14 +300,14 @@ func present(shot: Dictionary, now: float) -> bool:
 		return false
 	var direction := delta.normalized() if distance > 0.0001 else Vector3.FORWARD
 	var seed_value := float(int(shot.get("id",0)) % 101) * 0.37
-	if distance > 0.1:
+	if distance > 0.1 and not shot.get("projectile",false):
 		var tracer := _take("tracer",now,0.13,origin,direction,minf(distance,4.0),seed_value)
 		tracer["distance"] = distance
 	_take("muzzle",now,0.48,origin+direction*0.10,direction,1.05,seed_value)
 	var hit = shot.get("hit")
 	var blocked = shot.get("blocked",false)
 	var contact: bool = (hit is String and not hit.is_empty()) or (hit is bool and hit == true) or (blocked is bool and blocked == true)
-	if contact:
+	if contact and not shot.get("projectile",false):
 		# Endpoint is authoritative. Set the card back slightly on that incoming
 		# ray so the collider doesn't bury it. No assumed surface normal/scorch.
 		_take("contact",now,0.85,endpoint-direction*0.20,direction,1.55,seed_value)
@@ -315,3 +339,8 @@ func update(now: float, camera: Camera3D) -> void:
 				node.basis = camera.global_basis
 			node.scale = Vector3.ONE*slot.size*growth
 			slot.material.set_shader_parameter("age",age)
+
+func present_impact(impact: Dictionary, now: float) -> void:
+	var origin := Vector3(float(impact.get("x",0)),float(impact.get("y",0)),float(impact.get("z",0)))
+	if not origin.is_finite(): return
+	_take("contact",now,1.4,origin+Vector3.UP*0.65,Vector3.FORWARD,2.5,float(int(impact.get("id",0))%101)*0.37)

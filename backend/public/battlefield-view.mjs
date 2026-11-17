@@ -7,6 +7,9 @@ export function buildBattlefield(THREE,scene,map,surface,{readableMarkers=false}
  for(const c of map.chunks){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(c.vertices,3));g.setIndex(c.indices);g.setAttribute('color',new THREE.Float32BufferAttribute(terrainPaint(c.vertices,c.colors,map),3));const uv=[];for(let i=0;i<c.vertices.length;i+=3)uv.push(c.vertices[i]/4,c.vertices[i+2]/4);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('normal',new THREE.Float32BufferAttribute(terrain.normalsFor(c.vertices),3));const mesh=new THREE.Mesh(g,groundMaterial);if(!terrainMeshes.length)surface(mesh,'#c4c0aa',1,1);mesh.receiveShadow=true;scene.add(mesh);terrainMeshes.push(mesh);}
  scene.add(buildRiverArt(THREE,map.water,terrain.heightAt));
  if(map.trees?.length)scene.add(...buildTreeArt(THREE,map.trees));
+ // Shared authoritative cuboids must remain visible in the legacy preview too.
+ const coverMaterial=new THREE.MeshStandardMaterial({color:0x817d69,roughness:.96});
+ for(const b of map.cover??[]){const mesh=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),coverMaterial);mesh.name=b.id;mesh.position.set(b.x,b.y,b.z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);}
  const bridgeMeshes=buildBridgeArt(THREE,map.bridges);
  scene.add(...bridgeMeshes);
  const postGeometry=new THREE.BoxGeometry(.3,2,.3),posts=new THREE.InstancedMesh(postGeometry,new THREE.MeshStandardMaterial({color:0xd9d0ad,roughness:1}),map.bases.length*4),matrix=new THREE.Matrix4();let i=0;

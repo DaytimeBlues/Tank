@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { ProjectilePool, PROJECTILE_RULES } from './projectiles.mjs';
 import { sessionToken } from './session-token.mjs';
 import { BattlefieldDrive } from './battlefield-drive.mjs';
 import { differentialStep } from './suspension.mjs';
@@ -8,7 +9,7 @@ import { VISUALS } from '../public/tank-visual.mjs';
 
 const failure = (message, code) => Object.assign(new Error(message), { code });
 const BLOCKED_SPAWN_GRACE = 2;
-export const BATTLE_RULES = Object.freeze({ maxPlayers: 4, teamSize: 2, health: 3, respawnSeconds: 5, reservationSeconds: 30 });
+export const BATTLE_RULES = Object.freeze({ maxPlayers: 4, teamSize: 2, health: tankProfile().health, respawnSeconds: 5, reservationSeconds: 30 });
 export function validateBattleOptions({ team = 'auto', visualId = 'kestrel', tankId = 'prototype' } = {}) {
   if (!['auto', 'blue', 'red'].includes(team)) throw new Error('Unknown team');
   if (!VISUALS.some(v=>v.id===visualId)) throw new Error('Unknown tank visual');
@@ -24,6 +25,7 @@ export class BattleRoom {
     for (const handle of this.arena.targetColliders.keys()) this.world.removeCollider(this.world.getCollider(handle), true);
     this.arena.targets.length = 0; this.arena.targetColliders.clear();
     this.map = { ...this.arena.map, mode: 'battle' }; this.seats = {}; this.nextPlayer = 0;
+    this.projectilePool = new ProjectilePool();
     this.bases = freshBases(this.map.bases); this.events = []; this.eventId = 0; this.shotId = 0; this.winner = null;
   }
   seat(token) {
@@ -64,10 +66,10 @@ export class BattleRoom {
       spawn = anchors.find(anchor => anchor !== preferred && clear(anchor));
       if (!spawn) return false;
     }
-    p.drive = new BattlefieldDrive(this.tankId, this.arena); p.drive.reset(spawn, yaw);
+    p.drive = new BattlefieldDrive(this.tankId, this.arena, undefined, p.visualId); p.drive.reset(spawn, yaw);
     // Zero mass preserves chassis tuning while covering the actual visible turret.
     this.world.createCollider(RAPIER.ColliderDesc.cuboid(.85, .4, 1).setTranslation(0, .75, 0).setMass(0), p.drive.body);
-    p.health = BATTLE_RULES.health; p.input = {}; p.lastInput = this.time; p.respawnAt = null; p.shot = null;
+    p.health = tankProfile(this.tankId).health; p.input = {}; p.lastInput = this.time; p.respawnAt = null; p.shot = null;
     p.tank = { ...p.drive.pose(), turret: 0, reload: 0, heat: 0, tankId: this.tankId }; return true;
   }
   command(token, input) {
@@ -90,7 +92,7 @@ export class BattleRoom {
     this.hostId ??= p.id;
   }
   removeSeat(id, p) {
-    p.drive?.remove(); delete this.seats[id];
+    p.drive?.remove(); this.projectilePool.removeOwner(id); delete this.seats[id];
     if (this.hostId === id) this.hostId = Object.values(this.seats).find(other => other.connected)?.id;
   }
   leave(token) { const [id, p] = this.seat(token); this.removeSeat(id, p); }
@@ -102,18 +104,36 @@ export class BattleRoom {
   resetTrial(token) { const [, p] = this.seat(token); if (!p.connected) throw new Error('Disconnected session'); if (this.winner) throw new Error('Match complete'); if (!this.battleStarted()) throw new Error('Battle has not started'); this.kill(p); }
   fire(p) {
     if (!p.connected || !p.drive || !p.health || p.tank.reload > 0 || this.winner || !this.battleStarted()) return;
-    const hit = p.drive.cast(p.tank.turret), profile = p.drive.profile;
-    const victim = hit.bodyHandle === undefined ? null : Object.values(this.seats).find(other => other.drive?.body.handle === hit.bodyHandle);
-    let damaged = null;
-    if (victim && victim.team !== p.team && victim.health > 0) {
-      victim.health = Math.max(0, victim.health - profile.damage); damaged = victim.id;
-      if (!victim.health) this.kill(victim);
-    }
+    if (this.projectilePool.active.length >= PROJECTILE_RULES.cap) return;
+    const probe = p.drive.cast(p.tank.turret), profile = p.drive.profile;
+    const id = ++this.shotId, direction = probe.direction;
+    const shell = { id, ownerId:p.id, team:p.team, damage:profile.damage, bodyHandle:p.drive.body.handle,
+      ...probe.origin, dx:direction.x, dy:direction.y, dz:direction.z, time:this.time };
     p.tank.reload = profile.reloadSeconds;
-    p.shot = { id: ++this.shotId, ...hit.origin, endX: hit.origin.x + hit.direction.x * hit.distance,
-      endY: hit.origin.y + hit.direction.y * hit.distance, endZ: hit.origin.z + hit.direction.z * hit.distance,
-      time: this.time, hit: damaged, blocked: !!hit.category || !!victim };
+    p.shot = { id, ...probe.origin, endX:probe.origin.x+direction.x*PROJECTILE_RULES.range,
+      endY:probe.origin.y+direction.y*PROJECTILE_RULES.range,endZ:probe.origin.z+direction.z*PROJECTILE_RULES.range,
+      time:this.time,hit:null,blocked:false,projectile:true };
+    // Retain physical muzzle/mount obstruction guard; never tunnel out of cover.
+    if(probe.distance <= .0001 && probe.category) { Object.assign(p.shot,{blocked:true,endX:probe.origin.x,endY:probe.origin.y,endZ:probe.origin.z});this.projectilePool.impact(shell,probe.origin,this.time,{blocked:true}); }
+    else this.projectilePool.launch(shell);
   }
+  sweepProjectile(p,distance) {
+    const owner=this.seats[p.ownerId];
+    const excluded=owner?.drive?.body.handle===p.bodyHandle?owner.drive.body:undefined;
+    const ray=new RAPIER.Ray({x:p.x,y:p.y,z:p.z},{x:p.dx,y:p.dy,z:p.dz});
+    const hit=this.world.castRay(ray,distance,true,undefined,undefined,undefined,excluded,c=>!this.arena.waterBlockers.has(c.handle));
+    if(!hit)return null;
+    const body=hit.collider.parent();
+    const victim=body?Object.values(this.seats).find(other=>other.drive?.body.handle===body.handle):null;
+    let damaged=null;
+    if(victim && victim.team!==p.team && victim.health>0){
+      victim.health=Math.max(0,victim.health-p.damage);damaged=victim.id;
+      if(!victim.health)this.kill(victim);
+    }
+    if(owner?.shot?.id===p.id) Object.assign(owner.shot,{hit:damaged,blocked:true,endX:p.x+p.dx*hit.timeOfImpact,endY:p.y+p.dy*hit.timeOfImpact,endZ:p.z+p.dz*hit.timeOfImpact});
+    return {distance:hit.timeOfImpact,hit:damaged,blocked:true};
+  }
+
   step(dt) {
     if (!Number.isFinite(dt) || dt <= 0 || dt > .1) throw new Error('Invalid timestep');
     this.time += dt;
@@ -133,11 +153,13 @@ export class BattleRoom {
         differentialStep(p.drive, dt / n, p.input.throttle ?? 0, p.input.steer ?? 0, .05, false);
       }
       this.world.timestep = dt / n; this.world.step();
+      if(!this.winner)this.projectilePool.step(dt/n,this.time-dt+(i+1)*dt/n,(p,d)=>this.sweepProjectile(p,d));
     }
     for (const p of Object.values(this.seats)) if (p.drive) {
       Object.assign(p.tank, p.drive.pose());
-      const delta = p.input.bearing === undefined ? (p.input.aim ?? 0) * .75 * dt
-        : Math.max(-.75 * dt, Math.min(.75 * dt, Math.atan2(Math.sin(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret), Math.cos(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret))));
+      const turretRate = p.drive.profile.turretRadiansPerSecond;
+      const delta = p.input.bearing === undefined ? (p.input.aim ?? 0) * turretRate * dt
+        : Math.max(-turretRate * dt, Math.min(turretRate * dt, Math.atan2(Math.sin(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret), Math.cos(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret))));
       if (!this.winner) p.tank.turret += delta;
     }
     for (const p of Object.values(this.seats)) if (p.input.fire) this.fire(p);
@@ -146,24 +168,25 @@ export class BattleRoom {
       for (const event of advanceCaptures(this.bases, occupants, dt)) this.events.push({ ...event, id: ++this.eventId, time: this.time });
       if (this.events.length > 100) this.events.splice(0, this.events.length - 100);
       this.winner = ['blue', 'red'].find(team => this.bases.every(b => b.owner === team)) ?? null;
-      if (this.winner) for (const p of Object.values(this.seats)) p.input = {};
+      if (this.winner) { this.projectilePool.clear(); for (const p of Object.values(this.seats)) p.input = {}; }
     }
   }
   restart(token) {
     const [id, actor] = this.seat(token);
     if (!actor.connected || id !== this.hostId || !this.winner) throw new Error('Only the current host can restart a finished battle');
     for (const p of Object.values(this.seats)) { p.drive?.remove(); p.drive = null; p.health = 0; p.input = {}; p.respawnAt = this.time; }
+    this.projectilePool.clear();
     this.bases = freshBases(this.map.bases); this.events = []; this.winner = null;
   }
   snapshot(token) {
     const own = Object.values(this.seats).find(p => p.token === token);
     const players = Object.values(this.seats).map(p => ({ id: p.id, team: p.team, visualId: p.visualId, connected: p.connected,
-      health: p.health, maxHealth: BATTLE_RULES.health, respawnSeconds: p.health ? 0 : Math.max(0, p.respawnAt - this.time),
+      health: p.health, maxHealth: tankProfile(this.tankId).health, respawnSeconds: p.health ? 0 : Math.max(0, p.respawnAt - this.time),
       tank: { ...p.tank, ...(p.tank.quaternion ? { quaternion: { ...p.tank.quaternion } } : {}) }, shot: p.shot && { ...p.shot } }));
     const local = players.find(p => p.id === own?.id), scores = Object.fromEntries(['blue', 'red'].map(team => [team, this.bases.filter(b => b.owner === team).length]));
-    return { mode: this.mode, time: this.time, players, playerId: own?.id ?? null, hostId: this.hostId, scores, winner: this.winner,
+    return { ...this.projectilePool.snapshot(), mode: this.mode, time: this.time, players, playerId: own?.id ?? null, hostId: this.hostId, scores, winner: this.winner,
       rules: this.rules, tank: local?.tank ?? null, targets: [], shot: local?.shot ?? null, seats: {},
       capture: { bases: this.bases.map(b => ({ ...b })), events: this.events.map(e => ({ ...e })), owned: scores.blue }, won: !!this.winner };
   }
-  dispose() { this.world.free(); }
+  dispose() { this.projectilePool.clear(); this.world.free(); }
 }

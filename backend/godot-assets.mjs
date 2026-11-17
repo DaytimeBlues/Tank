@@ -8,7 +8,7 @@ const names=['index.html','index.js','index.wasm','index.pck','index.png','index
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.wasm':'application/wasm','.pck':'application/octet-stream','.png':'image/png'};
 const sha=b=>createHash('sha256').update(b).digest('hex');
 
-function browserBridge(mode){
+function browserBridge(mode,anonymousTest=false){
  return `(()=>{'use strict';document.documentElement.dataset.tankNetwork=${JSON.stringify(mode)};
  let pending=null;
  window.tankGodotBridge=Object.freeze({
@@ -24,14 +24,20 @@ function browserBridge(mode){
    }catch{answer({error:'Invalid room action.'});return;}
    if(location.protocol!=='https:'||document.documentElement.dataset.tankNetwork!=='hosted'){answer({error:'Private online play requires the secure classroom page.'});return;}
    const timer=setTimeout(()=>controller.abort(),4000);
-   fetch('/connection-ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(scope),cache:'no-store',mode:'same-origin',credentials:'same-origin',redirect:'error',signal:controller.signal})
+   (async()=>{
+    if(${JSON.stringify(anonymousTest)}){
+     const admission=await fetch('/access/guest',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'',cache:'no-store',mode:'same-origin',credentials:'same-origin',redirect:'error',signal:controller.signal});
+     if(!admission.ok)throw Error();
+    }
+    return fetch('/connection-ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(scope),cache:'no-store',mode:'same-origin',credentials:'same-origin',redirect:'error',signal:controller.signal});
+   })()
     .then(async response=>{if(!response.ok)throw Error();const data=await response.json();if(typeof data.ticket!=='string'||!/^[A-Za-z0-9_-]{16,512}$/.test(data.ticket))throw Error();answer({ticket:data.ticket});})
-    .catch(()=>answer({error:'Access expired or unavailable. Return to Private access, then try again.'})).finally(()=>clearTimeout(timer));
+    .catch(()=>answer({error:${JSON.stringify(anonymousTest?'Test session is full or unavailable. Try again shortly.':'Access expired or unavailable. Return to Private access, then try again.')}})).finally(()=>clearTimeout(timer));
   }
  });})();`;
 }
 
-export async function installGodotAssets(game,{mode='local',access=null,assetRoot=new URL('../web/',import.meta.url)}={}){
+export async function installGodotAssets(game,{mode='local',access=null,anonymousTest=false,assetRoot=new URL('../web/',import.meta.url)}={}){
  if(!['local','hosted'].includes(mode)||mode==='hosted'&&!access)throw Error('Invalid Godot asset boundary');
  const assets=new Map();
  for(const name of names){
@@ -43,7 +49,7 @@ export async function installGodotAssets(game,{mode='local',access=null,assetRoo
   }
   assets.set(name,{data,type:types[name.slice(name.lastIndexOf('.'))],sha256:sha(data)});
  }
- const bridge=Buffer.from(browserBridge(mode));assets.set('godot-bridge.js',{data:bridge,type:types['.js'],sha256:sha(bridge)});
+ const bridge=Buffer.from(browserBridge(mode,anonymousTest));assets.set('godot-bridge.js',{data:bridge,type:types['.js'],sha256:sha(bridge)});
  const index=assets.get('index.html').data.toString('utf8');
  const hashes=[...index.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].filter(m=>m[1].trim()).map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'");
  const policy="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' "+hashes.join(' ')+"; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self' data:; media-src 'self' blob:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
@@ -74,14 +80,16 @@ export async function installGodotAssets(game,{mode='local',access=null,assetRoo
 // credential generation or paid resource is created by this factory.
 export async function createGodotHostedGame(env=process.env,options={}){
  const fail=()=>{throw Error('Private Godot hosted configuration invalid');};
+ const anonymousTest=env.TANK_TEST_ACCESS==='anonymous-v1';
+ if(env.TANK_TEST_ACCESS!==undefined&&!anonymousTest)fail();
  const host=env.RENDER_EXTERNAL_HOSTNAME,origin=typeof host==='string'?'https://'+host:null;
  if(env.RENDER!=='true'||env.RENDER_SERVICE_TYPE!=='web'||env.IS_PULL_REQUEST!=='false'||env.TANK_NETWORK_MODE!=='hosted'||env.TANK_PRIVATE_PILOT!=='one-instance-epoch-v1'||
   !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.onrender\.com$/.test(host??'')||origin!==env.RENDER_EXTERNAL_URL||origin!==env.TANK_ALLOWED_ORIGINS||
-  !/^[0-9a-f]{64}$/.test(env.TANK_HOST_KEY_SHA256??'')||!/^\d{1,5}$/.test(env.PORT??''))fail();
+  !anonymousTest&&!/^[0-9a-f]{64}$/.test(env.TANK_HOST_KEY_SHA256??'')||!/^\d{1,5}$/.test(env.PORT??''))fail();
  let config;try{config=serverConfig(env);}catch{fail();}
  if(!config.port||[18012,18013,19099].includes(config.port))fail();
- const access=createPrivateAccess({audience:origin,hostKeyDigest:env.TANK_HOST_KEY_SHA256,now:options.now});
+ const access=createPrivateAccess({audience:origin,hostKeyDigest:env.TANK_HOST_KEY_SHA256,anonymousTest,now:options.now});
  const game=createGameServer({...config,hostedProvider:access,hostedAccess:access});
- try{return {...game,port:config.port,host:config.host,godot:await installGodotAssets(game,{mode:'hosted',access,assetRoot:options.assetRoot})};}
+ try{return {...game,port:config.port,host:config.host,godot:await installGodotAssets(game,{mode:'hosted',access,anonymousTest,assetRoot:options.assetRoot})};}
  catch(e){await game.close();throw e;}
 }

@@ -5,7 +5,7 @@ import { battleConnection, BATTLE_REJOIN_DELAY_MS, BATTLE_REJOIN_WINDOW_MS } fro
 import { tankProfile, selectionState } from './tank-config.mjs';
 import { setupHangar } from './hangar.mjs';
 import { GLTFLoader } from '/vendor/loaders/GLTFLoader.js';
-import { loadTankVisuals, VISUALS } from './tank-visual.mjs';
+import { loadTankVisuals, VISUALS, availableTankVisuals, selectableTankVisuals, canPresentAuthoritativeVisual, canPresentBattleVisuals, attachTankAimGuide } from './tank-visual.mjs';
 import { createBattleClient, nearbyBaseStatus } from './battle-client.mjs';
 import { drawTerritorialMap, MARKER_LEGEND } from './map-markers.mjs';
 import { createFreeLook, bindFreeLook, createCameraGuard, LOOK_LIMITS } from './free-look.mjs';
@@ -102,8 +102,8 @@ const wantsOriginalArt = battlefieldRequested && new URLSearchParams(location.se
 const modelLoader = wantsOriginalArt ? new GLTFLoader() : null;
 const visualBank = modelLoader ? await loadTankVisuals(THREE,url=>modelLoader.loadAsync(url),
   (item,error)=>console.warn(`Tank visual unavailable: ${item.name}`,error)) : new Map();
-const availableVisuals = VISUALS.filter(v=>visualBank.has(v.id));
-const selectableVisuals = availableVisuals.length ? availableVisuals : VISUALS;
+const availableVisuals = availableTankVisuals(visualBank,multiplayerRequested);
+const selectableVisuals = selectableTankVisuals(visualBank,multiplayerRequested);
 let initialVisual = 'kestrel';
 try { const stored = sessionStorage.getItem('tank-visual-choice'); if (VISUALS.some(v=>v.id===stored)) initialVisual = stored; } catch {}
 const queriedVisual = new URLSearchParams(location.search).get('visual');
@@ -113,7 +113,7 @@ const visualSelection = selectionState(selectableVisuals,
 function commitVisual(id) {
   if(!visualBank.has(id))return;
   for (const [key,v] of visualBank) v.root.visible = key === id;
-  originalVisual = visualBank.get(id); originalVisual.yaw.add(aimLine);
+  originalVisual = visualBank.get(id); attachTankAimGuide(THREE,aimLine,originalVisual,id);
   $('scene').dataset.visual = id;
   try { sessionStorage.setItem('tank-visual-choice',id); } catch {}
 }
@@ -325,6 +325,10 @@ async function connect(request) {
         manual = true; session = null; sessionStorage.removeItem(sessionKey); connection.close();
         showStatus(closeMessage, 60); return;
       }
+      if (!canPresentAuthoritativeVisual(visualBank,msg.visualId)) {
+        closeMessage = 'Selected tank asset unavailable. Reload to restore the model before rejoining.';
+        manual = true; release(); busy(false); connection.close(); showStatus(closeMessage,60); return;
+      }
       seated = true;
       if (online4v4Requested) $('forgetSeat').hidden = true;
       slopeMode = msg.map.mode === 'grade-drive'; battlefieldMode = ['battlefield','battle'].includes(msg.map.mode);
@@ -345,6 +349,10 @@ async function connect(request) {
       if (online4v4Requested) showStatus('Tank connected. Waiting for the battlefield…', 60);
       if (soloRequested) configureSoloUI();
       if(soloRequested)menu(document.hidden||!!msg.paused);else if (!online4v4Requested) $('scene').focus();
+    }
+    if (msg.type === 'state' && multiplayerRequested && !canPresentBattleVisuals(visualBank,msg.players??[])) {
+      closeMessage = 'A player tank asset is unavailable. Reload before continuing this match.';
+      manual = true; seated = false; release(); busy(false); connection.close(); showStatus(closeMessage,60); return;
     }
     if (msg.type === 'state' && (!online4v4Requested || seated)) {
       if (online4v4Requested) {

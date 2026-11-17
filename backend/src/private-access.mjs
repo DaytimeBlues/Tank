@@ -56,8 +56,8 @@ async function formBody(req) {
 
 // Every capability is admitted only by the boot that minted it. Rotation is
 // invalidation: no old record is reloaded or derivable from the host key.
-export function createPrivateAccess({ audience, hostKeyDigest, now=Date.now }) {
- const expectedHost=new URL(audience).host, hostDigest=Buffer.from(hostKeyDigest,'hex');
+export function createPrivateAccess({ audience, hostKeyDigest, anonymousTest=false, now=Date.now }) {
+ const expectedHost=new URL(audience).host, hostDigest=Buffer.from(hostKeyDigest??'','hex');
  const epoch=fresh(16), hostSubject='host_'+fresh(16);
  const mint=()=>epoch+fresh(32);
  const epochValue=value=>typeof value==='string'&&value.length===65&&value.startsWith(epoch)&&/^[A-Za-z0-9_-]+$/.test(value);
@@ -118,11 +118,11 @@ export function createPrivateAccess({ audience, hostKeyDigest, now=Date.now }) {
  }
  function permits(lease,scope,generation) {
   if(!active(lease))return false;
-  if(scope.action==='create')return lease.host && !room && (generation===undefined||generation===roomGeneration);
+  if(scope.action==='create')return (lease.host||anonymousTest) && !room && (generation===undefined||generation===roomGeneration);
   return !!room && scope.room===room.code && (generation===undefined||generation===room.generation);
  }
  function startLease(host) {
-  const key=mint(),lease={key:hash(key),subject:host?hostSubject:'guest_'+fresh(16),host,until:now()+SESSION_MS};
+  const key=mint(),lease={key:hash(key),subject:host?hostSubject:'guest_'+fresh(16),host,until:now()+(anonymousTest?30*60_000:SESSION_MS)};
   sessions.set(lease.key,lease);if(host)hostLease=lease;
   return key;
  }
@@ -131,6 +131,12 @@ export function createPrivateAccess({ audience, hostKeyDigest, now=Date.now }) {
   prune();
   const lease=leaseFor(req);
   if(req.method==='GET'||req.method==='HEAD'){
+   // Public test assets do not mint sessions. Admission happens only on a
+   // same-origin, rate-limited POST when the player creates/joins a match.
+   if(anonymousTest){
+    if(path.startsWith('/access'))return reply(res,404);
+    return pass(res);
+   }
    if(path==='/'){
     if(!lease)return reply(res,200,page(loginPage));
     if(req.url!==GAME)return reply(res,303,'',{Location:GAME});
@@ -141,7 +147,8 @@ export function createPrivateAccess({ audience, hostKeyDigest, now=Date.now }) {
   if(req.method!=='POST')return reply(res,405);
   if(exactHeader(req,'origin')!==audience)return reply(res,403);
   const ip=ipFor(req);if(!ip)return reply(res,403);
-  const kind=req.url==='/access/login'?'login':req.url==='/connection-ticket'?'ticket':
+  if(anonymousTest&&['/access/login','/access/invite'].includes(req.url))return reply(res,404);
+  const kind=req.url==='/access/login'||anonymousTest&&req.url==='/access/guest'?'login':req.url==='/connection-ticket'?'ticket':
    ['/access/invite','/access/logout'].includes(req.url)?'manage':null;
   if(!kind)return reply(res,404);
   if(kind==='ticket'&&!lease)return reply(res,401);
@@ -153,6 +160,14 @@ export function createPrivateAccess({ audience, hostKeyDigest, now=Date.now }) {
   if(kind==='ticket')return pass(res);
   const fields=await formBody(req);
   if(!fields)return reply(res,400);
+  if(kind==='login'&&anonymousTest){
+   if(fields.size)return reply(res,400);
+   if(active(lease))return reply(res,204);
+   prune();
+   if(sessions.size>=8)return reply(res,409,'Test session is full. Try again later.');
+   const key=startLease(false);
+   return reply(res,204,'',{'Set-Cookie':sessionCookie(key,30*60)});
+  }
   if(kind==='login'){
    if(fields.size!==2||fields.getAll('type').length!==1||fields.getAll('code').length!==1)return reply(res,400);
    if(active(lease))return reply(res,303,'',{Location:lease.host?'/access':GAME});

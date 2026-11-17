@@ -1,5 +1,6 @@
 import { BattleRoom, BATTLE_RULES } from './battle-room.mjs';
-import { SOLO_MAP, SOLO_SPAWNS } from './solo-map.mjs';
+import { ROADSIDE_MAP } from './roadside-map.mjs';
+import { SOLO_SPAWNS } from './solo-map.mjs';
 
 export const ONLINE_RULES = Object.freeze({ ...BATTLE_RULES, maxPlayers: 8, teamSize: 4 });
 export function battleFormat(value = '2v2') {
@@ -71,7 +72,7 @@ class OnlineFourBattle extends BattleRoom {
 export function createOnlineBattle({ tankId = 'prototype', format } = {}) {
   format = battleFormat(format);
   const room = format === '4v4'
-    ? new OnlineFourBattle({ tankId, configuration: { rules: ONLINE_RULES, map: SOLO_MAP, spawns: SOLO_SPAWNS } })
+    ? new OnlineFourBattle({ tankId, configuration: { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS } })
     : new BattleRoom({ tankId });
   room.format = format;
   return room;
