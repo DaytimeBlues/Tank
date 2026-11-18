@@ -125,13 +125,13 @@ export class BattleRoom {
     if(!hit)return null;
     const body=hit.collider.parent();
     const victim=body?Object.values(this.seats).find(other=>other.drive?.body.handle===body.handle):null;
-    let damaged=null;
+    let damaged=null,knockout=false;
     if(victim && victim.team!==p.team && victim.health>0){
       victim.health=Math.max(0,victim.health-p.damage);damaged=victim.id;
-      if(!victim.health)this.kill(victim);
+      if(!victim.health){this.kill(victim);knockout=true;}
     }
     if(owner?.shot?.id===p.id) Object.assign(owner.shot,{hit:damaged,blocked:true,endX:p.x+p.dx*hit.timeOfImpact,endY:p.y+p.dy*hit.timeOfImpact,endZ:p.z+p.dz*hit.timeOfImpact});
-    return {distance:hit.timeOfImpact,hit:damaged,blocked:true};
+    return {distance:hit.timeOfImpact,hit:damaged,blocked:true,...(knockout?{knockout:true}:{})};
   }
 
   step(dt) {

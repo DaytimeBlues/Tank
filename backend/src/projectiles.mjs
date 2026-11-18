@@ -5,7 +5,7 @@ export class ProjectilePool {
  clear(){this.active=[];this.impacts=[];}
  removeOwner(id){this.active=this.active.filter(p=>p.ownerId!==id);}
  launch(p){if(this.active.length>=PROJECTILE_RULES.cap)return false;this.active.push({...p,remaining:PROJECTILE_RULES.range,speed:PROJECTILE_RULES.speed});return true;}
- impact(p,position,time,result={}){this.impacts.push({id:p.id,ownerId:p.ownerId,...position,time,hit:result.hit??null,blocked:!!result.blocked});if(this.impacts.length>PROJECTILE_RULES.impactCap)this.impacts.splice(0,this.impacts.length-PROJECTILE_RULES.impactCap);}
+ impact(p,position,time,result={}){this.impacts.push({id:p.id,ownerId:p.ownerId,...position,time,hit:result.hit??null,blocked:!!result.blocked,...(result.knockout===true&&result.blocked===true&&typeof result.hit==="string"&&result.hit.length>0?{knockout:true}:{})});if(this.impacts.length>PROJECTILE_RULES.impactCap)this.impacts.splice(0,this.impacts.length-PROJECTILE_RULES.impactCap);}
  step(dt,time,sweep){
   this.impacts=this.impacts.filter(i=>time-i.time<PROJECTILE_RULES.impactSeconds);
   const alive=[];

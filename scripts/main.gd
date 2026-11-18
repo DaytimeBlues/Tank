@@ -7,6 +7,7 @@ const GUIDE_MAX_AGE_MSEC := 1000
 var arena: TankArenaView
 var transport := TankPortTransport.new()
 var camera: Camera3D
+var camera_obstruction = preload("res://scripts/chase_camera_obstruction.gd").new()
 const TrackVisual = preload("res://scripts/track_tank_view.gd")
 var peers: Dictionary = {}
 var old_shots: Dictionary = {}
@@ -15,6 +16,7 @@ var shot_effects: TankAcceptedShotEffects
 var projectile_view: Node3D
 var state: Dictionary = {}
 var status_label: Label
+var combat_strip: Control
 var stats_label: Label
 var room_field: LineEdit
 var port_field: LineEdit
@@ -70,6 +72,9 @@ func _ready() -> void:
 	settings.ambient_light_energy = 0.30
 	environment.environment = settings
 	add_child(environment)
+	var skyline := preload("res://scripts/watershed_skyline.gd").new()
+	skyline.name = "WatershedSkyline"
+	add_child(skyline)
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-52,-35,0)
 	light.light_color = Color("fff0d5")
@@ -105,6 +110,7 @@ func _ready() -> void:
 		_reset_track_histories()
 		guide_snapshot_msec = -1
 		accepted_guide.hide()
+		combat_strip.retire()
 		room_field.text = code
 		camera_seeded = false
 		_suspend_controls()
@@ -276,7 +282,9 @@ func _build_ui() -> void:
 	stats_label = _label("W/S drive · A/D turn · right-drag look / pointer aim · Space / click fire\nEscape or focus loss cancels controls. Online play continues.",hud_panel)
 	# Autowrap initially measures at a one-pixel width. Bound that minimum
 	# height before the parent container's first layout to keep this HUD onscreen.
-	stats_label.max_lines_visible = 4
+	stats_label.max_lines_visible = 5
+	combat_strip = preload("res://scripts/combat_status_strip.gd").new()
+	canvas.add_child(combat_strip)
 
 func _fit_ui() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
@@ -288,8 +296,10 @@ func _fit_ui() -> void:
 		map_view.visible = false
 	stats_label.custom_minimum_size.x = minf(388,viewport_size.x-64)
 	stats_label.size.x = stats_label.custom_minimum_size.x
-	hud_panel.position = Vector2(16,viewport_size.y-140)
-	hud_panel.size = Vector2(minf(420,viewport_size.x-32),124)
+	hud_panel.position = Vector2(16,viewport_size.y-164)
+	hud_panel.size = Vector2(minf(420,viewport_size.x-32),148)
+	combat_strip.position = Vector2((viewport_size.x-320)/2 if viewport_size.x>=1200 else viewport_size.x-336,viewport_size.y-84)
+	combat_strip.visible = viewport_size.x>=900
 
 func _backend_url() -> String:
 	return "ws://127.0.0.1:"+port_field.text.strip_edges()
@@ -315,6 +325,8 @@ func _connect_room(kind: String, format_value: String, role_trial: bool = false,
 		request["roleId"] = ROLE_IDS[role_selector.selected]
 	if kind == "join": request["code"] = room_field.text.strip_edges().to_upper()
 	state = {}
+	_retire_objective_state()
+	roster_label.text = "Connecting. Roster not yet confirmed."
 	_reset_track_histories()
 	guide_snapshot_msec = -1
 	accepted_guide.hide()
@@ -340,6 +352,8 @@ func _network_error(message: String) -> void:
 	status_label.text = message
 	_suspend_controls()
 	state = {}
+	_retire_objective_state()
+	roster_label.text = "Reconnecting. Seat not yet confirmed." if transport.is_recovering() else "No active seat. Join a room."
 	old_shots.clear()
 	shot_effects.clear()
 	projectile_view.clear()
@@ -351,6 +365,11 @@ func _network_error(message: String) -> void:
 	for button in connect_buttons: button.disabled = not presentation_prepared or transport.is_recovering()
 	_show_room_panel()
 
+func _retire_objective_state() -> void:
+	if is_instance_valid(combat_strip): combat_strip.retire()
+	map_view.clear_accepted_state()
+	arena.retire_objectives()
+
 func _reset_track_histories() -> void:
 	for visual in peers.values():
 		if is_instance_valid(visual): visual.reset_track_history()
@@ -360,6 +379,18 @@ func _accept_state(snapshot: Dictionary) -> void:
 	# Source-clock discontinuity or long snapshot gap: do not infer tread travel.
 	var old_time: float = float(state.get("time",-1))
 	var new_time: float = float(snapshot.get("time",0))
+	# Offline restart replaces the entire simulation, including its shot IDs
+	# and clock. Ignore retired epochs; never treat reordered online time as
+	# a reset. Older FIFO solo workers synchronously emit time zero on restart.
+	if snapshot.get("singlePlayer",false) and state.get("singlePlayer",false):
+		var previous_epoch := int(state.get("soloEpoch",0))
+		var next_epoch := int(snapshot.get("soloEpoch",0))
+		if previous_epoch > 0 and next_epoch < previous_epoch: return
+		if next_epoch > previous_epoch or (previous_epoch == 0 and next_epoch == 0 and new_time == 0.0 and old_time > 0.0):
+			projectile_view.clear()
+			shot_effects.clear()
+			old_shots.clear()
+		elif new_time < old_time: return
 	if state.is_empty() or new_time < old_time or new_time-old_time > 1.0 or snapshot.get("staging",{}).get("waiting",false) or state.get("staging",{}).get("waiting",false):
 		_reset_track_histories()
 	state = snapshot
@@ -435,21 +466,7 @@ func _accept_state(snapshot: Dictionary) -> void:
 	var weapon := "Ready" if own.health > 0 and own.tank.reload <= 0 else "Reload %.1fs" % own.tank.reload
 	if own.health <= 0: weapon = "Scrapped · respawn %.1fs" % own.respawnSeconds
 	if state.get("won",false): weapon = "Match complete"
-	var objective := "Capture all seven bases. M: map · Esc: menu"
-	var nearest_base: Dictionary = {}
-	var nearest_distance := INF
-	for base in state.capture.bases:
-		var distance := Vector2(own.tank.x-base.x,own.tank.z-base.z).length()
-		if distance <= base.radius+5 and distance < nearest_distance:
-			nearest_base = base
-			nearest_distance = distance
-	if not nearest_base.is_empty():
-		var base := nearest_base
-		var action := "Contested" if base.get("contested",false) else "Blue taking" if base.net > 0 and base.get("progress",0) < 1 else "Red taking" if base.net < 0 and base.get("progress",0) > -1 else "Hold the circle"
-		if nearest_distance > base.radius: action = "Enter the circle to help capture"
-		elif base.owner == own.team and ((own.team == "blue" and base.get("progress",0) >= 1 and base.net >= 0) or (own.team == "red" and base.get("progress",0) <= -1 and base.net <= 0)) and not base.get("contested",false): action = "Secured · advance or defend"
-		objective = "%s · %s · %s" % [str(base.id)+" "+base.name,str(base.owner).capitalize()+" holds" if base.owner != "neutral" else "Neutral",action]
-	if state.get("won",false): objective = str(state.winner).to_upper()+" WINS · Host: choose Rematch"
+	var objective: String = preload("res://scripts/capture_status.gd").describe(state,own)
 	stats_label.text = "%s · Hull %d/3 · %.1f km/h\nCannon: %s · Bases Blue %d / Red %d\n%s" % [str(own.team).to_upper(),own.health,absf(own.tank.speed)*3.6,weapon,state.scores.blue,state.scores.red,objective]
 	# Waiting snapshots can retain zero health after Rematch; this is not a live death.
 	if waiting:
@@ -459,6 +476,7 @@ func _accept_state(snapshot: Dictionary) -> void:
 		stats_label.text = "%s · Waiting for battle\n%s %s\n%s" % [str(own.team).to_upper(),readiness,start_hint,waiting_hint]
 	var staging_block = state.staging.get("block")
 	status_label.text = (str(staging_block) if staging_block != null else "All ready. Host: Start battle.") if waiting else "Match complete. Host can return everyone to the ready room." if state.get("won",false) else "Controls suspended; the online match continues." if paused_controls else "Live room "+transport.room_code
+	_refresh_combat_status()
 
 func _present_shot(shot: Dictionary) -> void:
 	# This receives only accepted new shots from _accept_state, not local fire input.
@@ -547,7 +565,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and not panel.get_global_rect().has_point(event.position):
 		get_viewport().gui_release_focus()
 
+func _refresh_combat_status() -> void:
+	if is_instance_valid(combat_strip): combat_strip.present(state,own_player(),presentation_prepared and transport.is_seated(),Time.get_ticks_msec()-guide_snapshot_msec if guide_snapshot_msec>=0 else -1,not _controls_eligible() or controls_blocked)
+	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="unavailable" and not state.is_empty(): stats_label.text = "Combat status unavailable.\nWaiting for a fresh server update."
+	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="paused": stats_label.text = stats_label.text.replace("Cannon: Ready","Cannon: Paused")
+	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="ready": stats_label.text = stats_label.text.replace("Cannon: Paused","Cannon: Ready")
+
 func _update_accepted_guide() -> void:
+	_refresh_combat_status()
 	if not is_instance_valid(accepted_guide): return
 	accepted_guide.hide()
 	var age := Time.get_ticks_msec()-guide_snapshot_msec
@@ -580,8 +605,9 @@ func _process(delta: float) -> void:
 		var target: Vector3 = peers[own.id].position
 		var heading := Vector3(sin(own.tank.yaw+orbit_yaw),0,cos(own.tank.yaw+orbit_yaw))
 		var desired := target-heading*20+Vector3.UP*orbit_height
-		camera.position = camera.position.lerp(desired,1.0-exp(-4.0*delta)) if camera_seeded else desired
-		camera.look_at(target+Vector3.UP*1.4)
+		camera.position = camera_obstruction.update(target+Vector3.UP*1.4,camera.position,desired,delta,camera_seeded)
+		camera.fov = camera_obstruction.framing_fov(target+Vector3.UP*1.4,camera.position,camera.fov,delta,camera_seeded)
+		if camera.position.distance_squared_to(target+Vector3.UP*1.4)>0.000001: camera.look_at(target+Vector3.UP*1.4)
 		camera_seeded = true
 	input_elapsed += delta
 	if input_elapsed < 0.05 or own.is_empty(): return
@@ -601,6 +627,7 @@ func _process(delta: float) -> void:
 	transport.send({"type":"input","input":command})
 
 func _dress_arena(data: Dictionary) -> void:
+	camera_obstruction.build(data)
 	# Bounds-fitted, spatially batched crowns preserve trunks and server collision.
 	for child in arena.get_children():
 		if child is MeshInstance3D and child.has_meta("original_tree_crown"): child.hide()
@@ -608,11 +635,28 @@ func _dress_arena(data: Dictionary) -> void:
 	crowns.name = "MeshyCrownClusters"
 	crowns.build(data)
 	arena.add_child(crowns)
+	var low_foliage = load("res://scripts/low_foliage_view.gd").new()
+	low_foliage.name = "LowFoliage"
+	low_foliage.build()
+	arena.add_child(low_foliage)
 	arena.add_child(load("res://assets/map_dressing.tscn").instantiate())
+	if not data.get("arches",[]).is_empty():
+		arena.get_node("MapDressing/BridgeStoneFascia/Fascia240Batched").hide()
+		preload("res://scripts/river_scenic_outlets.gd").reshape(arena.get_node("MapDressing/ScenicPerimeter"),data)
+	var district = load("res://scripts/windmill_district.gd").new()
+	district.name = "WindmillDistrict"
+	district.build(data)
+	arena.add_child(district)
 	arena.add_child(load("res://assets/close_detail.tscn").instantiate())
 	var verges = load("res://scripts/north_verge_view.gd").new()
 	verges.name = "NorthVergeClusters"
 	arena.add_child(verges)
+	var understorey = load("res://scripts/district_groundcover.gd").new()
+	understorey.name = "DistrictGroundcover"
+	arena.add_child(understorey)
+	var farm_verge = load("res://scripts/farm_verge.gd").new()
+	farm_verge.name = "FarmVergeSkirt"
+	arena.add_child(farm_verge)
 	var ground_factory = load("res://scripts/road_wear_material.gd")
 	for chunk in data.get("chunks",[]):
 		var mesh = arena.get_node_or_null(NodePath(str(chunk.id)))

@@ -30,8 +30,32 @@ func box_at(center: Vector3, dimensions: Vector3, color: Color) -> MeshInstance3
 	add_child(instance)
 	return instance
 
+func build_crossing_barrel(arch: Dictionary) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(0, arch.indices.size(), 3):
+		var triangle := PackedVector3Array()
+		for j in [0,2,1]:
+			var n := int(arch.indices[i+j])*3
+			triangle.append(Vector3(arch.vertices[n],arch.vertices[n+1],arch.vertices[n+2]))
+		var normal := (triangle[2]-triangle[0]).cross(triangle[1]-triangle[0]).normalized()
+		for vertex in triangle:
+			st.set_normal(normal)
+			st.add_vertex(vertex)
+	var shell := MeshInstance3D.new()
+	shell.name = arch.id
+	shell.mesh = st.commit()
+	var masonry: ShaderMaterial = preload("res://assets/materials/bridge_stone/bridge_stone.tres").duplicate()
+	masonry.set_shader_parameter("arch_face", true)
+	shell.material_override = masonry
+	add_child(shell)
+
 func build(data: Dictionary) -> void:
 	source_data = data
+	var depot = load("res://scripts/depot_landmark_view.gd").new()
+	depot.name = "DepotLandmarks"
+	depot.build(data)
+	add_child(depot)
 	var roadside = load("res://scripts/roadside_cover_view.gd").new()
 	roadside.name = "RoadsideCover"
 	roadside.build(data)
@@ -96,6 +120,14 @@ func build(data: Dictionary) -> void:
 			for side in [-1.0,1.0]:
 				box_at(Vector3(x,bridge.top+0.015,bridge.z+side*6.7),Vector3(2.0,0.025,0.35),Color("e4d69a"))
 		bridge_count += 1
+	for b in data.get("shoulders",[]):
+		var coping := box_at(Vector3(b.x,b.top-b.thickness/2.0,b.z),Vector3(b.w,b.thickness,b.d),Color("afa897"))
+		coping.name=b.id
+		var cut: ShaderMaterial=preload("res://assets/materials/bridge_stone/bridge_stone.tres").duplicate()
+		cut.set_shader_parameter("stone_colour",Color("8c887b"))
+		coping.material_override=cut
+	for arch in data.get("arches",[]):
+		build_crossing_barrel(arch)
 	var water_mesh := box_at(Vector3(0,data.water.y-0.025,0),Vector3(data.water.w,0.05,data.size),Color("365f63"))
 	water_mesh.set_meta("river_surface",true)
 	for tree in data.trees:
@@ -141,6 +173,34 @@ func build(data: Dictionary) -> void:
 		label.no_depth_test = false
 		add_child(label)
 		base_labels[str(base.id)] = label
+
+
+# Keep nearby objective signs legible without covering the tank/terrain.
+# Scale only down: distant labels retain their existing depth/occlusion behaviour.
+func update_label_sizes(camera: Camera3D, viewport_height: float) -> void:
+	if camera == null or viewport_height <= 0.0: return
+	var units_per_depth := 2.0 * tan(deg_to_rad(camera.fov) * 0.5) / viewport_height
+	for label: Label3D in base_labels.values():
+		var depth := -camera.to_local(label.global_position).z
+		if depth <= 0.1:
+			label.visible = false
+			continue
+		label.visible = true
+		var bounds := label.get_aabb().size
+		var maximum_width := 220.0 * units_per_depth * depth
+		var maximum_height := 48.0 * units_per_depth * depth
+		var factor := minf(1.0, minf(maximum_width / maxf(bounds.x,0.001), maximum_height / maxf(bounds.y,0.001)))
+		label.scale = Vector3.ONE * factor
+
+func _process(_delta: float) -> void:
+	update_label_sizes(get_viewport().get_camera_3d(),get_viewport().get_visible_rect().size.y)
+
+func retire_objectives() -> void:
+	for base in source_data.get("bases",[]):
+		if base_labels.has(str(base.id)):
+			var label: Label3D = base_labels[str(base.id)]
+			label.text = "%s - %s\nState unavailable" % [str(base.id),str(base.get("name",""))]
+			label.modulate = Color("aaaaaa")
 
 func update_bases(bases: Array) -> void:
 	for base in bases:

@@ -1,5 +1,37 @@
 [gd_scene format=4]
 
+[ext_resource type="Shader" path="res://assets/shaders/district_stone.gdshader" id="Shader_ridge_stone"]
+[ext_resource type="Texture2D" path="res://assets/farm_plaster.png" id="Texture_ridge_plaster"]
+
+[sub_resource type="StandardMaterial3D" id="Material_ridge_slit"]
+resource_name = "Ridge aperture charcoal"
+albedo_color = Color(0.13, 0.16, 0.15, 1)
+roughness = 0.96
+
+[sub_resource type="ShaderMaterial" id="Material_ridge_body"]
+resource_name = "Ridge weathered masonry"
+shader = ExtResource("Shader_ridge_stone")
+shader_parameter/stone_color = Color(0.43, 0.44, 0.38, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_ridge_cap"]
+resource_name = "Ridge matte olive concrete"
+albedo_color = Color(0.36, 0.38, 0.29, 1)
+albedo_texture = ExtResource("Texture_ridge_plaster")
+roughness = 0.97
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="Material_ridge_rock"]
+resource_name = "Ridge weathered rock"
+albedo_color = Color(0.48, 0.47, 0.40, 1)
+roughness = 0.97
+
+[sub_resource type="StandardMaterial3D" id="Material_ridge_rock_light"]
+resource_name = "Ridge rock pale facets"
+albedo_color = Color(0.57, 0.55, 0.46, 1)
+roughness = 0.97
+
+
 [sub_resource type="Shader" id="Shader_enmt5"]
 code = "shader_type spatial;
 render_mode cull_disabled;
@@ -4146,6 +4178,10 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 185,
 
 [node name="SketchCraft model" type="MeshInstance3D" parent="OutsideCoreLandmarks/ridge_bunker" unique_id=235971054]
 mesh = SubResource("ArrayMesh_hcxd4")
+surface_material_override/0 = SubResource("Material_ridge_slit")
+surface_material_override/1 = SubResource("Material_ridge_body")
+surface_material_override/2 = SubResource("Material_ridge_cap")
+
 
 [node name="reservoir_sluicehouse" type="Node3D" parent="OutsideCoreLandmarks" unique_id=584358573]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 185, 8.607402, 110)
@@ -4212,6 +4248,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 176, 12.272479, -85)
 
 [node name="SketchCraft model" type="MeshInstance3D" parent="OutsideCoreLandmarks/rock_cluster" unique_id=1211214942]
 mesh = SubResource("ArrayMesh_iugej")
+surface_material_override/0 = SubResource("Material_ridge_rock")
+surface_material_override/1 = SubResource("Material_ridge_rock_light")
+
 
 [node name="shoreline_boulders" type="Node3D" parent="OutsideCoreLandmarks" unique_id=239880185]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, -0.047749635, 177)

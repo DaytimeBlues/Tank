@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "landmarks": [
+    {
+      "id": "depot-service-garage",
+      "kind": "service-garage",
+      "x": -144,
+      "z": -120,
+      "y": 3.9,
+      "w": 12,
+      "h": 4.8,
+      "d": 8
+    }
+  ]
+}

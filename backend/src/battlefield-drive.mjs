@@ -1,4 +1,5 @@
-import { installRoadsideCover } from './roadside-cover.mjs';
+import {riverGroundHeight} from './river-crossings.mjs';
+import { installRoadsideCover, installDistrictMeshes } from './roadside-cover.mjs';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { BATTLEFIELD_MAP,terrainHeight } from './battlefield-map.mjs';
 import { createHull,rotate,differentialStep } from './suspension.mjs';
@@ -15,10 +16,16 @@ export class BattlefieldDrive {
   this.world=new RAPIER.World({x:0,y:-9.81,z:0});this.supportHandles=new Set();this.bridgeColliders=new Map();this.waterBlockers=new Set();
   for(const c of this.map.chunks){const collider=this.world.createCollider(RAPIER.ColliderDesc.trimesh(new Float32Array(c.vertices),new Uint32Array(c.indices)).setFriction(.8));this.supportHandles.add(collider.handle);this.ground??=collider;}
   for(const b of this.map.bridges){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(b.w/2,b.thickness/2,b.d/2).setTranslation(b.x,b.top-b.thickness/2,b.z).setFriction(.8));this.supportHandles.add(c.handle);this.bridgeColliders.set(b.id,c);}
+  for(const b of this.map.shoulders??[]){
+   const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(b.w/2,b.thickness/2,b.d/2).setTranslation(b.x,b.top-b.thickness/2,b.z).setFriction(.8));this.supportHandles.add(c.handle);this.bridgeColliders.set(b.id,c);
+  }
+  for(const arch of this.map.arches??[])this.world.createCollider(RAPIER.ColliderDesc.trimesh(Float32Array.from(arch.vertices),Uint32Array.from(arch.indices)).setFriction(.8));
   for(const w of this.map.walls)this.world.createCollider(RAPIER.ColliderDesc.cuboid(w.w/2,5,w.d/2).setTranslation(w.x,3,w.z));
   for(const b of this.map.blockers){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(b.w/2,b.h/2,b.d/2).setTranslation(b.x,b.y,b.z));this.waterBlockers.add(c.handle);}
   for(const t of this.map.trees??[])this.world.createCollider(RAPIER.ColliderDesc.cylinder(t.trunkHeight/2,t.radius).setTranslation(t.x,t.y+t.trunkHeight/2,t.z));
   installRoadsideCover(RAPIER,this.world,this.map.cover??[]);
+  installRoadsideCover(RAPIER,this.world,this.map.landmarks??[]);
+  this.districtColliders=installDistrictMeshes(RAPIER,this.world,this.map.districtMeshes??[]);
   this.targets=[[-120,-110],[-130,-110],[-110,-110]].map(([x,z],i)=>({id:i+1,x,z,y:terrainHeight(x,z)+1,hp:3}));for(const [baseId,offset] of [['5',-8],['7',-8],['7',8]]){const b=this.map.bases.find(b=>b.id===baseId);this.targets.push({id:this.targets.length+1,x:b.x+offset,z:b.z,y:b.y+1,hp:3,captureTeam:'red',baseId});}this.targetColliders=new Map();
   for(const t of this.targets){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(1.5,1,.5).setTranslation(t.x,t.y,t.z));this.targetColliders.set(c.handle,t);}
   }
@@ -31,10 +38,11 @@ export class BattlefieldDrive {
  }
  step(dt,throttle,steer){const n=Math.ceil(dt/(1/120));for(let i=0;i<n;i++)differentialStep(this,dt/n,throttle,steer);}
  pose(){const p=this.body.translation(),q=this.body.rotation(),v=this.body.linvel(),f=rotate(q,{x:0,y:0,z:1}),right=rotate(q,{x:1,y:0,z:0}),bridge=this.map.bridges.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);
-  return {x:p.x,y:p.y,z:p.z,quaternion:{...q},yaw:Math.atan2(f.x,f.z),pitch:Math.asin(Math.max(-1,Math.min(1,f.y)))*180/Math.PI,roll:Math.asin(Math.max(-1,Math.min(1,right.y)))*180/Math.PI,speed:v.x*f.x+v.y*f.y+v.z*f.z,groundHeight:bridge?.top??terrainHeight(p.x,p.z),terrain:bridge?'bridge':'grass'};
+  return {x:p.x,y:p.y,z:p.z,quaternion:{...q},yaw:Math.atan2(f.x,f.z),pitch:Math.asin(Math.max(-1,Math.min(1,f.y)))*180/Math.PI,roll:Math.asin(Math.max(-1,Math.min(1,right.y)))*180/Math.PI,speed:v.x*f.x+v.y*f.y+v.z*f.z,groundHeight:bridge?.top??this.shoulderAt(p)?.top??riverGroundHeight(this.map,p.x,p.z,terrainHeight),terrain:bridge||this.shoulderAt(p)?'bridge':'grass'};
  }
  grounded(){let n=0;for(let i=0;i<this.vehicle.numWheels();i++)if(this.vehicle.wheelIsInContact(i))n++;return n>=2;}
- occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
+ shoulderAt(p){return this.map.shoulders?.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);}
+ occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&!this.shoulderAt(p)&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
  garrisonOccupants(){return this.targets.filter(t=>t.captureTeam).map(t=>({id:'post-'+t.id,team:t.captureTeam,x:t.x,y:t.y,z:t.z,alive:t.hp>0,eligible:true,grounded:true}));}
  cast(turret,range=BATTLE_SHOT_RANGE){
   const m=muzzle(this.pose(),turret,this.visualId),ray=new RAPIER.Ray(m.origin,m.direction);

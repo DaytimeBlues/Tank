@@ -158,7 +158,7 @@ func prepare() -> bool:
 		var age := 0.025 if index % 2 == 0 else 0.25
 		slot.material.set_shader_parameter("age",age)
 		slot.material.set_shader_parameter("life",0.48 if slot.kind == "muzzle" else 0.85)
-		slot.material.set_shader_parameter("variant",0.0 if slot.kind == "muzzle" else 1.0)
+		slot.material.set_shader_parameter("variant",2.0 if index>=14 else (0.0 if slot.kind == "muzzle" else 1.0))
 		slot.material.set_shader_parameter("seed",float(index)*0.37)
 		var node := MeshInstance3D.new()
 		node.mesh = card_mesh
@@ -168,7 +168,7 @@ func prepare() -> bool:
 		node.scale = Vector3.ONE*1.2
 		preparation_viewport.add_child(node)
 		centers.append(Vector2i(probe_camera.unproject_position(node.global_position)))
-		labels.append(slot.kind+"_"+("hot" if age < 0.1 else "smoke")+"_"+str(index))
+		labels.append(("knockout" if index>=14 else str(slot.kind))+"_"+("hot" if age < 0.1 else "smoke")+"_"+str(index))
 		index += 1
 	var tracer := MeshInstance3D.new()
 	tracer.mesh = tracer_mesh
@@ -280,6 +280,7 @@ func _take(kind: String, start: float, life: float, origin: Vector3, direction: 
 		slot.material.set_shader_parameter("life",life)
 		slot.material.set_shader_parameter("variant",0.0 if kind == "muzzle" else 1.0)
 		slot.material.set_shader_parameter("seed",seed_value)
+		slot.material.set_shader_parameter("confirmed_damage",0.0)
 	active.append(slot)
 	emitted += 1
 	return slot
@@ -333,14 +334,29 @@ func update(now: float, camera: Camera3D) -> void:
 			node.scale = Vector3(0.045,0.045,length_value)
 		else:
 			var progress: float = age/slot.life
-			var growth: float = 1.0+progress*(1.0 if slot.kind == "muzzle" else 1.8)
+			# Fast pressure expansion eases into slower smoke growth. Lifetimes,
+			# authoritative anchors and the existing maximum card extent stay fixed.
+			var expansion: float = 1.0-pow(1.0-progress,2.0)
+			var growth: float = 1.0+expansion*(1.0 if slot.kind == "muzzle" else 1.8)
 			node.position = slot.origin+Vector3.UP*progress*(0.38 if slot.kind == "muzzle" else 0.85)
 			if camera != null:
 				node.basis = camera.global_basis
 			node.scale = Vector3.ONE*slot.size*growth
 			slot.material.set_shader_parameter("age",age)
 
+static func is_confirmed_knockout(impact:Dictionary)->bool:
+	var hit=impact.get("hit")
+	var flag=impact.get("knockout")
+	var blocked=impact.get("blocked")
+	return typeof(flag)==TYPE_BOOL and flag and typeof(blocked)==TYPE_BOOL and blocked and hit is String and not hit.is_empty()
+
+
 func present_impact(impact: Dictionary, now: float) -> void:
 	var origin := Vector3(float(impact.get("x",0)),float(impact.get("y",0)),float(impact.get("z",0)))
 	if not origin.is_finite(): return
-	_take("contact",now,1.4,origin+Vector3.UP*0.65,Vector3.FORWARD,2.5,float(int(impact.get("id",0))%101)*0.37)
+	var knockout:=is_confirmed_knockout(impact)
+	var slot := _take("contact",now,1.55 if knockout else 1.4,origin+Vector3.UP*(0.0 if knockout else 0.65),Vector3.FORWARD,4.3 if knockout else 2.5,float(int(impact.get("id",0))%101)*0.37)
+	if knockout:slot.material.set_shader_parameter("variant",2.0)
+	# Only an accepted nonempty victim ID means damage, not world/friendly contact.
+	var hit = impact.get("hit")
+	slot.material.set_shader_parameter("confirmed_damage",1.0 if hit is String and not hit.is_empty() else 0.0)

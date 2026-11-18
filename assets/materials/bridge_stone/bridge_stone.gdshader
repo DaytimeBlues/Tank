@@ -4,6 +4,7 @@ render_mode cull_disabled;
 // Visual-only: world-space colour cannot move geometry or authority colliders.
 uniform sampler2D detail_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec4 stone_colour : source_color = vec4(0.38, 0.40, 0.41, 1.0);
+uniform bool arch_face = false;
 uniform float detail_strength : hint_range(0.0,0.2) = 0.055;
 uniform float stone_roughness : hint_range(0.0,1.0) = 0.94;
 varying vec3 world_position;
@@ -43,6 +44,22 @@ void fragment() {
  vec3 fascia = stone * mix(0.84,1.13,variation);
  fascia = mix(fascia,stone_colour.rgb*0.48,max(mortar.x,mortar.y));
  ALBEDO = mix(stone,fascia,side_weight);
+ // The barrel face has radial stone joints rather than horizontal brickwork
+ // cut off along a curve. The opening itself is real shared mesh geometry.
+ if (arch_face && abs(world_normal.z)>0.8 && abs(world_position.x)<=10.0) {
+  float x=world_position.x;
+  float rise=world_position.y-(0.15-0.0275*x*x);
+  float dist=rise/sqrt(1.0+0.003025*x*x);
+  float band=1.0-smoothstep(0.39,0.42,dist);
+  float angle=atan(x,10.0+world_position.y);
+  float wedge=angle*19.0+0.5;
+  float joint_dist=min(fract(wedge),1.0-fract(wedge));
+  float aa_w=max(fwidth(wedge),0.001);
+  float joint_w=1.0-smoothstep(0.025-aa_w,0.025+aa_w,joint_dist);
+  float varied=fract(sin(floor(wedge)*33.13)*1347.21);
+  vec3 cut_stone=stone*vec3(1.23,1.16,1.03)*mix(0.91,1.10,varied);
+  ALBEDO=mix(ALBEDO,mix(cut_stone,stone*.58,joint_w),band);
+ }
  ROUGHNESS = stone_roughness;
  SPECULAR = 0.1;
 }

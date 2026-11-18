@@ -1,0 +1,36 @@
+extends Control
+# Accepted-state instrument only; never predicts firing, damage or timer completion.
+var reading:Dictionary={"mode":"unavailable","status":"STATUS UNAVAILABLE","health":-1,"progress":0.0}
+func _init():
+ mouse_filter=Control.MOUSE_FILTER_IGNORE
+ custom_minimum_size=Vector2(320,68)
+ size=custom_minimum_size
+func retire()->void:
+ reading={"mode":"unavailable","status":"STATUS UNAVAILABLE","health":-1,"progress":0.0};queue_redraw()
+func present(state:Dictionary,own:Dictionary,seated:bool,age:int,paused:bool)->void:
+ retire()
+ if not seated or age<0 or age>1000 or own.is_empty() or not own.get("connected",false):return
+ var health=own.get("health",null);var reload_value=own.get("tank",{}).get("reload",null)
+ if not (health is int or health is float) or not (reload_value is int or reload_value is float):return
+ if not is_finite(float(health)) or not is_finite(float(reload_value)) or health<0 or health>3 or float(health)!=int(health) or reload_value<0 or reload_value>4:return
+ reading={"mode":"ready","status":"READY","health":int(health),"progress":1.0-float(reload_value)/4.0,"reload":float(reload_value)}
+ if state.get("staging",{}).get("waiting",true):reading.mode="waiting";reading.status="WAITING FOR BATTLE";reading.progress=0.0
+ elif state.get("won",false):reading.mode="complete";reading.status="MATCH COMPLETE";reading.progress=0.0
+ elif health<=0:reading.mode="dead";reading.status="RESPAWNING";reading.progress=0.0
+ elif paused:reading.mode="paused";reading.status="CONTROLS PAUSED"
+ elif reload_value>0:reading.mode="reload";reading.status="RELOAD %.1f s" % reload_value
+ queue_redraw()
+func _draw():
+ var font=ThemeDB.fallback_font
+ var plate=StyleBoxFlat.new();plate.bg_color=Color(.035,.055,.065,.94);plate.border_color=Color("899c9b");plate.set_border_width_all(1);plate.set_corner_radius_all(5)
+ draw_style_box(plate,Rect2(Vector2.ZERO,size))
+ var ink=Color("eff5e8");var accent=Color("e8bf71") if reading.mode=="reload" else Color("b8dbb5")
+ draw_string(font,Vector2(12,18),"CANNON",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("adbfbc"))
+ draw_string(font,Vector2(12,39),reading.status,HORIZONTAL_ALIGNMENT_LEFT,-1,15,ink)
+ draw_rect(Rect2(12,49,194,7),Color("344445"))
+ if reading.health>=0:draw_rect(Rect2(12,49,194*reading.progress,7),accent)
+ draw_string(font,Vector2(229,18),"HULL",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("adbfbc"))
+ for i in 3:
+  var box=Rect2(229+i*24,25,18,16)
+  draw_rect(box,ink if reading.health>i else Color("344445"));draw_rect(box,Color("adbfbc"),false,1)
+ draw_string(font,Vector2(229,58),str(reading.health)+" / 3" if reading.health>=0 else "-- / 3",HORIZONTAL_ALIGNMENT_LEFT,-1,13,ink)

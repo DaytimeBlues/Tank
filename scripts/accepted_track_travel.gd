@@ -7,7 +7,9 @@ var initialized := false
 var left_metres := 0.0
 var right_metres := 0.0
 var half_width := 1.65
+var generation := 0
 func reset() -> void:
+	generation += 1
 	initialized=false
 	left_metres=0.0
 	right_metres=0.0
@@ -29,6 +31,7 @@ func sample(position:Vector3,yaw:float,alive:bool=true,discontinuity:bool=false)
 	previous_yaw=yaw
 	# Conservative discontinuity guard for this bounded3m/s fixture; not network acceptance.
 	if delta.length()>3.0 or abs(turn)>1.2:
+		generation += 1
 		left_metres=0.0
 		right_metres=0.0
 		return Vector2.ZERO
