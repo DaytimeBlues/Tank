@@ -1,7 +1,5 @@
 {
-  "source": "d912541b9d24c02687f4b6fc1128702687bc0c54",
-  "godot": "4.8-beta2 official cafc17a19",
-  "preset": "Web no-thread Compatibility",
+  "source": "45999f9cc6e791226d4c1d656622315027a03842",
   "files": [
     {
       "name": "index.apple-touch-icon.png",
@@ -21,7 +19,7 @@
     {
       "name": "index.html",
       "bytes": 5470,
-      "sha256": "f49c93f1718fbdce46253dd91941e3d6bfe3837122c81ae11ad069db6f791ce8"
+      "sha256": "677c147c67f2eb247dabfb6e3625ed7add106cdf4429f0c22bd4cf130375eb25"
     },
     {
       "name": "index.icon.png",
@@ -35,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 7911696,
-      "sha256": "a59e96260f967e7bd91f01241cd576ffbf5cbb9d7493c794f869ee489426a617"
+      "bytes": 7912320,
+      "sha256": "3f08bcf63e65c258605a95a8a6fa7686d3e6f1c9b33519c19812884f315abbe1"
     },
     {
       "name": "index.png",
@@ -206,7 +204,7 @@
     "scripts/bounded_impact_audio.gd.uid": "169b686e9aa8e18826fa8a070d09eb26b6ba4643d306eabf049531e19d64600a",
     "scripts/building_finish.gd": "844da2700938b9a004532ed70398061eebf9b96ef9223aaed2a3dd44f6c7d87b",
     "scripts/building_finish.gd.uid": "c87ad925b8e69679be8b434425808a96b0ad59963b93f13e70958167fac51f7d",
-    "scripts/capture_status.gd": "2bd2ed2b9a6d1960fdcaf205d421adcf16c3f58faa6b25b10a7d3eaba21db739",
+    "scripts/capture_status.gd": "f83fb86e9c9ccce10776770f38c0c3e10c99438cbdbf769d4aed17d6dd710b8b",
     "scripts/capture_status.gd.uid": "40deb683724cb80f4a704fe8e4d2508a2acc93398ee762c36db5a66fb4f75968",
     "scripts/chase_camera_obstruction.gd": "5b83402191b2f82e6d011e0bb30665de3fdce907f5a6254e9e09837a18eb274e",
     "scripts/chase_camera_obstruction.gd.uid": "802cb23fe0b0a873b8e98d1644404aa825fced02fd5ac281ef866d9858eb52dd",
@@ -222,13 +220,13 @@
     "scripts/east_scenic_ridge.gd.uid": "7e36afa71160222c7aaed9b59a1eeb0c99637025ec36d22597a15adff02d9dca",
     "scripts/farm_verge.gd": "7908f4e5ddba2a31c94b44dc81602e2e0c5ccffa4036a828cce9a5c825b49cd7",
     "scripts/farm_verge.gd.uid": "16f3c127bf6cbe46300b75a538036ad993e6f0670725b95c96ac131c9920f0a9",
-    "scripts/input_gate.gd": "ee99ec5c080563c612bda9f1547672817f9e51597aa92ea8b31bf037c012a044",
+    "scripts/input_gate.gd": "d4de39db1acc0e04d13eedf84f23e1f289a55b34281c296c8f537f0c37c647cb",
     "scripts/input_gate.gd.uid": "05fe13b51390bce23cb5efd1378b5c521bae6af8129db9b497b3a6d721d414f6",
     "scripts/leichttraktor_wheels.gd": "aedb70d063f082bc98c03a04b82ef12fcdda18fcd3656ab0179280fbf85363c4",
     "scripts/leichttraktor_wheels.gd.uid": "2239ca515eef2e537f7b813966340fb3eb889cbba85a22309593dc80c68d2f62",
     "scripts/low_foliage_view.gd": "d997b43976de50a3a379d302b627b665c6ffedefc4251a45a8d62a59b9e66e68",
     "scripts/low_foliage_view.gd.uid": "0a547acb19ad708fd23f0c17d233731ea26bc4f06e320d808107292f216b9694",
-    "scripts/main.gd": "356ba39ac140b952eeb3f7fc6ea5727d1ebc48ee2497646c201caed04272aacc",
+    "scripts/main.gd": "a39dade4e528d459019822f14e4d8c908ffdf7432aea1dfe6fa080c4b698e99b",
     "scripts/main.gd.uid": "cd5058f9c9e7536e7f1a199d56e12d5be341ab638bc11961147067ab0e090af1",
     "scripts/meshy_crown_view.gd": "81d7a91d557f15ca90b74fae410069db5fca4190550ac355705369f32c61d5f5",
     "scripts/meshy_crown_view.gd.uid": "db84a19ee0a8316f5151fffb3b0d7b6856052912352c28134db93ad61eac47e8",
@@ -262,7 +260,5 @@
     "scripts/watershed_skyline.gd.uid": "6e0c3752366bdd925aa31ec9c47af083cb25e92e1fbbcc4ece02be265673dd3b",
     "scripts/windmill_district.gd": "f8551b1618db4aaae20bc990926905a7b6ad5417d30720575285e9c2347def8b",
     "scripts/windmill_district.gd.uid": "c1eaf93a8df9382c5c176ed81f3ab4f1f09bf7cfdd9c3c851bf8c14d8a1b2f76"
-  },
-  "binding": "Headless fresh export of curated runtime. All runtime input bytes verified against the exact source commit.",
-  "acceptance": "Public test candidate. No new rendered chase-camera, multiplayer or device-performance acceptance."
+  }
 }

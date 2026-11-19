@@ -193,7 +193,7 @@ func _build_ui() -> void:
 	scroll.add_child(content)
 	var heading := _label("TANK BATTLE",content)
 	heading.add_theme_font_size_override("font_size",22)
-	_label("Capture all seven bases. One player, one tank. Up to eight players.",content)
+	_label("Matches: capture all seven bases. One tank per player, up to eight players.",content)
 	var fields := HBoxContainer.new()
 	content.add_child(fields)
 	port_field = LineEdit.new()
@@ -550,7 +550,7 @@ func _controls_eligible() -> bool:
 	return own_player().get("health",0) > 0
 
 func _pointer_over_ui(position: Vector2) -> bool:
-	return (panel != null and panel.visible and panel.get_global_rect().has_point(position)) or (hud_panel != null and hud_panel.get_global_rect().has_point(position)) or (toolbar != null and toolbar.get_global_rect().has_point(position)) or (map_view != null and map_view.visible and map_view.get_global_rect().has_point(position))
+	return (panel != null and panel.visible and panel.get_global_rect().has_point(position)) or (hud_panel != null and hud_panel.visible and hud_panel.get_global_rect().has_point(position)) or (combat_strip != null and combat_strip.visible and combat_strip.get_global_rect().has_point(position)) or (toolbar != null and toolbar.get_global_rect().has_point(position)) or (map_view != null and map_view.visible and map_view.get_global_rect().has_point(position))
 
 func _input(event: InputEvent) -> void:
 	# Observe releases before GUI consumption. Authorization remains separate.
@@ -568,8 +568,11 @@ func _input(event: InputEvent) -> void:
 	if not pressed:
 		input_gate.edge(key,false)
 		return
-	if not _controls_eligible() or (key == "mouse1" and _pointer_over_ui(event.position)):
+	if not _controls_eligible():
 		_suspend_controls()
+	elif key == "mouse1" and _pointer_over_ui(event.position):
+		input_gate.ignore_hud_mouse_until_release()
+		return
 	else:
 		input_gate.resume()
 	input_gate.edge(key,true,echo)

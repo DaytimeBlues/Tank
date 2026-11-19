@@ -3,6 +3,7 @@ extends RefCounted
 static func describe(state: Dictionary, own: Dictionary) -> String:
 	if state.get("won",false): return str(state.get("winner","")).to_upper()+" WINS · Host: choose Rematch"
 	var fallback := "Capture all seven bases. M: map · Esc: menu"
+	if state.get("practice",false): fallback = "Solo practice: drive, shoot or try a capture. No win condition. M: map"
 	var tank: Dictionary = own.get("tank",{})
 	if not tank.has("x") or not tank.has("z"): return fallback
 	var x := float(tank.x)
@@ -22,6 +23,15 @@ static func describe(state: Dictionary, own: Dictionary) -> String:
 	var progress := float(b.get("progress",0))
 	var net := int(b.get("net",0))
 	var action := "Contested" if b.get("contested",false) else "Blue taking" if net>0 and progress<1 else "Red taking" if net<0 and progress> -1 else "Hold the circle"
+	# A contested circle can still advance. Read only the published counters;
+	# never infer player participation or direction from team proximity.
+	if b.get("contested",false) and b.has_all(["blue","red","net","progress"]):
+		var blue = b.blue
+		var red = b.red
+		if (blue is int or blue is float) and (red is int or red is float) and (b.net is int or b.net is float) and blue>0 and red>0 and blue==floorf(blue) and red==floorf(red) and b.net==blue-red and is_finite(progress):
+			if net==0: action = "Contested - Even: progress paused"
+			elif net>0: action = "Contested - Blue advancing" if progress<1 else "Contested - Blue holding"
+			else: action = "Contested - Red advancing" if progress> -1 else "Contested - Red holding"
 	if not b.get("contested",false) and ((progress>=1 and net>=0) or (progress<= -1 and net<=0)): action = "Blue secured" if progress>=1 else "Red secured"
 	var hint := "Stay grounded in circle"
 	if own.get("health",0)<=0: hint = "Respawn to help"

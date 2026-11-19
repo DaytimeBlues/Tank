@@ -3,21 +3,27 @@ extends RefCounted
 const CONTROLS = ["w", "s", "a", "d", "left", "right", "space", "mouse1"]
 var down: Dictionary = {}
 var blocked: Dictionary = {}
+var ignored_hud_mouse := false
 var eligible := false
 func suspend(raw: Dictionary = {}) -> void:
 	eligible = false
 	for key in CONTROLS:
 		if down.get(key, false) or raw.get(key, false): blocked[key] = true
 	down.clear()
+# Ignore this button until release without dropping unrelated held controls.
+func ignore_hud_mouse_until_release() -> void:
+	down.erase("mouse1")
+	ignored_hud_mouse = true
 func resume() -> void:
 	eligible = true
 func edge(key: String, pressed: bool, echo := false) -> void:
 	if not key in CONTROLS: return
 	if not pressed:
+		if key == "mouse1": ignored_hud_mouse = false
 		down.erase(key)
 		blocked.erase(key)
 		return
-	if echo: return
+	if echo or (key == "mouse1" and ignored_hud_mouse): return
 	if not eligible:
 		blocked[key] = true
 		return
