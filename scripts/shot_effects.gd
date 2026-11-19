@@ -110,6 +110,19 @@ static func can_retry_late_effect(report: Dictionary, already_retried: bool) -> 
 static func scene_startup_result_on_time(verified: bool, elapsed_ms: int) -> bool:
 	return verified and elapsed_ms >= 0 and elapsed_ms < SCENE_STARTUP_TIMEOUT_MS
 
+# Preserve the gameplay sky's radiance specialization without drawing a sky
+# behind the alpha-tested cells. Never change fields on the live Environment.
+static func preparation_environment(live: Environment) -> Environment:
+	if live == null: return null
+	var probe := live.duplicate(false) as Environment
+	if live.background_mode == Environment.BG_SKY:
+		if live.reflected_light_source == Environment.REFLECTION_SOURCE_BG:
+			probe.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		if live.ambient_light_source == Environment.AMBIENT_SOURCE_BG:
+			probe.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	probe.background_mode = Environment.BG_CLEAR_COLOR
+	return probe
+
 # Draw into an isolated offscreen world before READY. Allocation alone does not
 # compile a first-visible pipeline. Readback after frame_post_draw proves pixels.
 # No permanent pool node is borrowed, no present()/history/recoil/input is used.
@@ -144,6 +157,12 @@ func prepare() -> bool:
 	preparation_viewport.handle_input_locally = false
 	preparation_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	parent.add_child(preparation_viewport)
+	var world := parent.get_world_3d()
+	var live_camera := parent.get_viewport().get_camera_3d()
+	var live_env := live_camera.environment if live_camera != null else null
+	if live_env == null: live_env = world.environment
+	if live_env == null: live_env = world.fallback_environment
+	preparation_viewport.find_world_3d().environment = preparation_environment(live_env)
 	var probe_camera := Camera3D.new()
 	probe_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	probe_camera.size = 8.0
@@ -180,6 +199,7 @@ func prepare() -> bool:
 	centers.append(Vector2i(probe_camera.unproject_position(tracer.global_position)))
 	labels.append("tracer")
 	var texture := preparation_viewport.get_texture()
+	var clear_alpha := 1.0
 	var verified := 0
 	var attempts := 0
 	var draws := 0
@@ -214,6 +234,11 @@ func prepare() -> bool:
 		verified = 0
 		samples.clear()
 		if image != null and not image.is_empty() and image.get_size() == PREPARATION_SIZE:
+			# The unused corners must be transparent; an opaque sky is not a cue.
+			clear_alpha = maxf(image.get_pixel(0,0).a,image.get_pixel(PREPARATION_SIZE.x-1,PREPARATION_SIZE.y-1).a)
+			if clear_alpha > 0.001:
+				reason = "BACKGROUND_NOT_TRANSPARENT"
+				break
 			for i in range(centers.size()):
 				var at := centers[i]
 				if at.x >= 0 and at.x < image.get_width() and at.y >= 0 and at.y < image.get_height():
@@ -231,7 +256,7 @@ func prepare() -> bool:
 	var elapsed_ms := Time.get_ticks_msec()-started
 	if reason.is_empty() and not preparation_result_on_time(verified,elapsed_ms): reason = "RETIREMENT_TIMEOUT"
 	var success := preparation_result_on_time(verified,elapsed_ms) and reason.is_empty()
-	preparation_report = {"status":"DRAW_VERIFIED" if success else "FAILED","success":success,"reason":reason,"drawnMaterials":verified,"drawCalls":draws,"attempts":attempts,"size":[80,64],"temporaryNodes":19,"retired":true,"elapsedMs":elapsed_ms,"deadlineMs":PREPARATION_TIMEOUT_MS,"deadlineOverrunMs":maxi(0,elapsed_ms-PREPARATION_TIMEOUT_MS),"samples":samples,"phase":"EFFECT_VERIFICATION","sceneStartup":scene_startup_report,"totalElapsedMs":Time.get_ticks_msec()-total_started}
+	preparation_report = {"status":"DRAW_VERIFIED" if success else "FAILED","success":success,"reason":reason,"drawnMaterials":verified,"drawCalls":draws,"attempts":attempts,"size":[80,64],"temporaryNodes":19,"retired":true,"elapsedMs":elapsed_ms,"deadlineMs":PREPARATION_TIMEOUT_MS,"deadlineOverrunMs":maxi(0,elapsed_ms-PREPARATION_TIMEOUT_MS),"samples":samples,"clearCornerAlpha":clear_alpha,"phase":"EFFECT_VERIFICATION","sceneStartup":scene_startup_report,"totalElapsedMs":Time.get_ticks_msec()-total_started}
 	preparation_attempt_history.append(preparation_report.duplicate(true))
 	if can_retry_late_effect(preparation_report,preparation_retry_used):
 		preparation_retry_used = true

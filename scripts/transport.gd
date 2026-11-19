@@ -14,6 +14,7 @@ var _request: Dictionary = {}
 var _url := ""
 var _session_url := ""
 var _session_format := "4v4"
+var _session_preset := ""
 var _session_hosted := false
 var _hosted := false
 var _seated := false
@@ -27,6 +28,12 @@ var _retry_at := 0
 var _generation := 0
 var _ticket_callback
 var _visible_was := true
+
+static func confirmed_practice_state(msg:Dictionary,expected:String)->bool:
+	if msg.get("practicePreset","")!=expected:return false
+	if expected=="":return true
+	var speed=msg.get("driveTargetMps")
+	return expected=="brisk-v1" and msg.get("practice")==true and typeof(speed) in [TYPE_INT,TYPE_FLOAT] and is_finite(float(speed)) and float(speed)>0.
 
 func is_seated() -> bool:
 	return _seated
@@ -167,6 +174,11 @@ func poll() -> void:
 			var message = JSON.parse_string(socket.get_packet().get_string_from_utf8())
 			if not message is Dictionary: continue
 			if message.get("type") == "joined":
+				var expected: String = _session_preset if _request.get("type")=="reconnect" else str(_request.get("practicePreset",""))
+				if message.get("practicePreset","")!=expected:
+					_retire("The server did not confirm the requested practice preset.",false)
+					return
+				_session_preset = expected
 				map_data = message.map
 				room_code = message.code
 				_token = message.token
@@ -176,6 +188,9 @@ func poll() -> void:
 				_joined_current = true
 				joined.emit(room_code)
 			elif message.get("type") == "state" and _joined_current:
+				if not confirmed_practice_state(message,_session_preset):
+					_retire("Practice confirmation changed. Controls remain neutral.",false)
+					return
 				_seated = true
 				_phase = "seated"
 				_retry_until = 0

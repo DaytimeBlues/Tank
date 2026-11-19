@@ -1,5 +1,7 @@
 shader_type spatial;
 render_mode cull_disabled;
+// Default: canonical playable road treatment. The scenic apron uses the same fixed vertex/lighting path.
+uniform bool scenic_ground=false;
 uniform vec4 road_segments[32];
 uniform vec4 quay_footpath[5];
 uniform bool has_quay_path=false;
@@ -11,8 +13,20 @@ uniform int root_count=0;
 varying vec3 world;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+#include "res://assets/depot_fork_verge.gdshaderinc"
 void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
 void fragment(){
+ if (scenic_ground) {
+  float broad=noise(world.xz*0.13);
+  float grain=noise(world.xz*2.6);
+  vec3 tint=COLOR.rgb;
+  float grass=smoothstep(0.015,0.09,tint.g-tint.r);
+  vec3 earth=vec3(0.42,0.34,0.23);
+  vec3 meadow=vec3(0.31,0.39,0.22);
+  vec3 base=mix(tint,mix(earth,meadow,grass),0.60);
+  ALBEDO=base*(0.88+broad*0.19+grain*0.07);
+  ROUGHNESS=0.97;
+ } else {
  float grass=smoothstep(.025,.10,COLOR.g-COLOR.r);float broad=noise(world.xz*.23);float fine=noise(world.xz*5.0);
  vec3 base=mix(vec3(.44,.34,.22),vec3(.34,.43,.23),grass);
  ALBEDO=mix(COLOR.rgb,base,.73)*(.86+.22*broad+.10*fine);
@@ -49,6 +63,28 @@ void fragment(){
  vec2 cell=floor(world.xz*8.0);float grit=step(.91,hash(cell))*(1.0-smoothstep(.08,.26,length(fract(world.xz*8.0)-.5)));
  ALBEDO=mix(ALBEDO,vec3(.50,.47,.36),grit*verge*.36);
  vec2 p=world.xz;
+ ALBEDO=depot_fork_verge(ALBEDO,p,dist,broad,fine);
+
+ // East landing, central crossing only. Roughly squared local setts laid
+ // crosswise in a packed-earth bed, breaking up toward the orchard road.
+ vec2 sett_uv=p/vec2(.56,1.06);
+ vec2 sett_aa=max(fwidth(sett_uv),vec2(.001));
+ if(p.x>40.0 && p.x<54.0 && abs(p.y)<5.7){
+  float course=floor(sett_uv.x);
+  sett_uv.y+=mod(course,2.0)*.5;
+  vec2 key=floor(sett_uv);
+  vec2 rim=min(fract(sett_uv),1.0-fract(sett_uv));
+  vec2 inset=smoothstep(vec2(.035)-sett_aa,vec2(.035)+sett_aa,rim);
+  float resolve=1.0-smoothstep(.2,.85,max(sett_aa.x,sett_aa.y));
+  float face=mix(.86,inset.x*inset.y,resolve);
+  float width=1.0-smoothstep(4.75,5.7,abs(p.y));
+  float distance_fade=1.0-smoothstep(43.0,54.0,p.x);
+  float broken=smoothstep(-.15,.32,distance_fade-.60*mix(.5,hash(key),resolve));
+  float bed=width*distance_fade;
+  vec3 paver=mix(vec3(.29,.29,.26),vec3(.45,.43,.36),mix(.5,hash(key),resolve));
+  paver*=.93+.10*broad+.05*fine;
+  ALBEDO=mix(ALBEDO,paver,bed*broken*(.23+.75*face));
+ }
 
  // Two bounded western field finishes. Opaque colour only: canonical triangles untouched.
  vec2 field_local=p-vec2(-142.0,120.0);
@@ -190,4 +226,5 @@ void fragment(){
  }
  float wet=(1.0-smoothstep(.45,1.15,world.y))*(1.0-smoothstep(12.0,19.0,abs(world.x)));
  ALBEDO=mix(ALBEDO,ALBEDO*vec3(.56,.62,.62),wet*.7);ROUGHNESS=mix(.98,.48,wet);
+ }
 }

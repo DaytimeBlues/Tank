@@ -1,5 +1,6 @@
 [gd_scene format=4]
 
+[ext_resource type="Shader" path="res://assets/ground_road_wear.gdshader" id="Shader_shared_ground"]
 [ext_resource type="Shader" path="res://assets/shaders/district_stone.gdshader" id="Shader_ridge_stone"]
 [ext_resource type="Texture2D" path="res://assets/farm_plaster.png" id="Texture_ridge_plaster"]
 
@@ -32,20 +33,10 @@ albedo_color = Color(0.57, 0.55, 0.46, 1)
 roughness = 0.97
 
 
-[sub_resource type="Shader" id="Shader_enmt5"]
-code = "shader_type spatial;
-render_mode cull_disabled;
-varying vec3 world;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
-void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
-void fragment(){float broad=noise(world.xz*0.13);float grain=noise(world.xz*2.6);vec3 tint=COLOR.rgb;float grass=smoothstep(0.015,0.09,tint.g-tint.r);vec3 earth=vec3(0.42,0.34,0.23);vec3 meadow=vec3(0.31,0.39,0.22);vec3 base=mix(tint,mix(earth,meadow,grass),0.60);ALBEDO=base*(0.88+broad*0.19+grain*0.07);ROUGHNESS=0.97;}
-
-"
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2ho2l"]
 render_priority = 0
-shader = SubResource("Shader_enmt5")
+shader = ExtResource("Shader_shared_ground")
+shader_parameter/scenic_ground = true
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_ldpbj"]
 _surfaces = [{

@@ -6,7 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Room, initPhysics } from './src/room.mjs';
 import { validateBattleOptions } from './src/battle-room.mjs';
 import { createSeatRolePrototype, validateSeatRoleAdmission } from './src/seat-roles.mjs';
-import { battleFormat, createOnlineBattle } from './src/online-battle.mjs';
+import { battleFormat, createOnlineBattle, BRISK_PRACTICE_ID } from './src/online-battle.mjs';
 import { serverConfig, acceptsOrigin, validateOrigins } from './src/server-config.mjs';
 import { createHostedTickets, bounded } from './src/hosted-tickets.mjs';
 import { GAME_PROTOCOL, hostedScope } from './public/hosted-ticket.mjs';
@@ -235,6 +235,8 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           }
           firstAdmission = null; // One admission attempt, including failed join or reconnect.
         }
+        if (['driveSpeed','speed','forwardMps','driveTargetMps'].some(k=>Object.hasOwn(msg,k))) throw new Error('Numeric drive overrides unavailable');
+        if (Object.hasOwn(msg,'practicePreset') && (networkMode!=='local' || msg.practicePreset!==BRISK_PRACTICE_ID || msg.practice!==true || msg.type!=='create' || msg.mode!=='battle' || msg.format!=='4v4' || Object.keys(msg).some(k=>!['type','mode','format','role','team','visualId','tankId','practice','practicePreset'].includes(k)))) throw new Error('Invalid practice preset');
         if (Object.hasOwn(msg,'roleProtocol') && msg.roleProtocol !== 1) throw new Error('Unknown role protocol');
         if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
         if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k))) throw new Error('Invalid role admission');
@@ -248,12 +250,13 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.
         if ((msg.mode ?? 'range') !== room.mode) throw new Error('Room mode mismatch. Open the matching range, slope, solo or battle link.');
         if (room.mode === 'battle' && battleFormat(msg.format) !== room.format) throw new Error('Room format mismatch. Open the matching 2v2 or 4v4 link.');
+        if(msg.type==='join' && room.practicePreset===BRISK_PRACTICE_ID) throw new Error('Brisk Practice is a private one-human trial');
         if(msg.roleProtocol===1 && !room.selectRole)throw new Error('Role protocol mismatch');
         let token, role;
         if (msg.type === 'reconnect') {

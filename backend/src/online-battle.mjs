@@ -69,11 +69,25 @@ class OnlineFourBattle extends BattleRoom {
       players: state.players.map(p => ({ ...p, ready: !!this.seats[p.id].ready })) };
   }
 }
-export function createOnlineBattle({ tankId = 'prototype', format, practice = false } = {}) {
+// One human, no bots, no model-specific stats. The server chooses a fixed travel target.
+export const BRISK_PRACTICE_ID = 'brisk-v1';
+const BRISK_MPS = 3.3;
+class BriskPractice extends OnlineFourBattle {
+  get practicePreset() { return BRISK_PRACTICE_ID; }
+  spawn(player) {
+    const ok = super.spawn(player);
+    if (ok) player.drive.driveSpeed = BRISK_MPS;
+    return ok;
+  }
+  identity(token) { return { ...super.identity(token), practicePreset: BRISK_PRACTICE_ID }; }
+  snapshot(token) { return { ...super.snapshot(token), practicePreset: BRISK_PRACTICE_ID, driveTargetMps: BRISK_MPS }; }
+}
+export function createOnlineBattle({ tankId = 'prototype', format, practice = false, practicePreset } = {}) {
+  if (practicePreset !== undefined && (practicePreset !== BRISK_PRACTICE_ID || practice !== true || format !== '4v4')) throw new Error('Invalid practice preset');
   if (typeof practice !== 'boolean' || practice && format !== '4v4') throw new Error('Invalid practice mode');
   format = battleFormat(format);
   const room = format === '4v4'
-    ? new OnlineFourBattle({ tankId, configuration: { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS } })
+    ? new (practicePreset === BRISK_PRACTICE_ID ? BriskPractice : OnlineFourBattle)({ tankId, configuration: { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS } })
     : new BattleRoom({ tankId });
   if (practice) {
     room.practice = true;

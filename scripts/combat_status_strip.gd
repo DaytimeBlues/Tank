@@ -12,8 +12,10 @@ func present(state:Dictionary,own:Dictionary,seated:bool,age:int,paused:bool)->v
  if not seated or age<0 or age>1000 or own.is_empty() or not own.get("connected",false):return
  var health=own.get("health",null);var reload_value=own.get("tank",{}).get("reload",null)
  if not (health is int or health is float) or not (reload_value is int or reload_value is float):return
- if not is_finite(float(health)) or not is_finite(float(reload_value)) or health<0 or health>3 or float(health)!=int(health) or reload_value<0 or reload_value>4:return
- reading={"mode":"ready","status":"READY","health":int(health),"progress":1.0-float(reload_value)/4.0,"reload":float(reload_value)}
+ var duration: float = preload("res://scripts/trial_role_readout.gd").duration(state,own)
+ if duration<=0.0:return
+ if not is_finite(float(health)) or not is_finite(float(reload_value)) or health<0 or health>3 or float(health)!=int(health) or reload_value<0 or reload_value>duration:return
+ reading={"mode":"ready","status":"READY","health":int(health),"progress":1.0-float(reload_value)/duration,"reload":float(reload_value)}
  if state.get("staging",{}).get("waiting",true):reading.mode="waiting";reading.status="WAITING FOR BATTLE";reading.progress=0.0
  elif state.get("won",false):reading.mode="complete";reading.status="MATCH COMPLETE";reading.progress=0.0
  elif health<=0:reading.mode="dead";reading.status="RESPAWNING";reading.progress=0.0

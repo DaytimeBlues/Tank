@@ -1,7 +1,8 @@
 extends RefCounted
 # Surface-only finish: original arrays, surfaces and transforms remain untouched.
 static func apply(mesh:MeshInstance3D,surface:int,kind:int,colour:String)->void:
- var material=ShaderMaterial.new();material.shader=load("res://assets/shaders/building_finish.gdshader")
+ var material=ShaderMaterial.new();material.shader=load("res://assets/shaders/district_stone.gdshader")
+ material.set_shader_parameter("building_space",true)
  material.set_shader_parameter("surface_color",Color(colour));material.set_shader_parameter("finish_kind",kind)
  var vertices=mesh.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]
  var bottom:=INF

@@ -21,6 +21,8 @@ var stats_label: Label
 var room_field: LineEdit
 var port_field: LineEdit
 const ROLE_IDS = ["prototype","flanker","generalist","anchor"]
+const RoleReadout = preload("res://scripts/trial_role_readout.gd")
+var role_note: Label
 var role_selector: OptionButton
 var roster: OptionButton
 var ready_button: Button
@@ -211,8 +213,9 @@ func _build_ui() -> void:
 	content.add_child(roster)
 	roster.item_selected.connect(func(_index: int): get_viewport().gui_release_focus())
 	role_selector = OptionButton.new()
-	for label in ["Standard: 3.0 m/s", "Flanker trial: 3.6 m/s", "Generalist: 3.0 m/s", "Anchor trial: 2.4 m/s"]: role_selector.add_item(label)
+	for id in ROLE_IDS: role_selector.add_item(RoleReadout.label(id))
 	content.add_child(role_selector)
+	role_note = _label("Role choice applies only to a handling trial.",content)
 	role_selector.item_selected.connect(func(index: int):
 		get_viewport().gui_release_focus()
 		if transport.is_seated() and state.get("roleProtocol",0) == 1 and state.get("staging",{}).get("waiting",false):
@@ -228,6 +231,8 @@ func _build_ui() -> void:
 	connect_buttons.append(_button("Teacher: Create room",buttons,func(): _connect_room("create","4v4")))
 	connect_buttons.append(_button("Create handling trial",buttons,func(): _connect_room("create","4v4",true)))
 	connect_buttons.append(_button("Join room",buttons,func(): _connect_room("join","4v4")))
+	if not OS.has_feature("web") or transport.browser_info().get("mode","")=="local":
+		connect_buttons.append(_button("Brisk Practice (speed trial)",buttons,func(): _connect_room("create","4v4",false,true,true)))
 	roster_label = _label("Room roster will appear here. No student names or email accounts are needed.",content)
 	var ready_row := HFlowContainer.new()
 	content.add_child(ready_row)
@@ -257,7 +262,7 @@ func _build_ui() -> void:
 	switch_button.disabled = true
 	# Ready/Start stay before a growing eight-seat roster in the scroll view.
 	content.move_child(ready_row,roster_label.get_index())
-	_label("W/S drive · A/D turn · pointer/arrows aim · Space/click fire. Right-drag looks around. Capture all 7 bases to win. Each hull takes 3 hits; cannon reload is 4 seconds. Online play continues while the menu is open.",content)
+	_label("W/S drive · A/D turn · pointer/arrows aim · Space/click fire. Right-drag looks around. Capture all 7 bases to win. Each hull takes 3 hits. The cannon strip shows when you can fire again. Online play continues while the menu is open.",content)
 	if OS.has_feature("web"):
 		_button("Private access / invitations",content,func():
 			var location = JavaScriptBridge.get_interface("location")
@@ -310,7 +315,7 @@ func _show_room_panel() -> void:
 static func normalized_bearing(offset: Vector2) -> float:
 	return atan2(offset.x,offset.y)/PI
 
-func _connect_room(kind: String, format_value: String, role_trial: bool = false, practice: bool = false) -> void:
+func _connect_room(kind: String, format_value: String, role_trial: bool = false, practice: bool = false, brisk: bool = false) -> void:
 	if not presentation_prepared:
 		_suspend_controls()
 		input_elapsed = 0
@@ -320,6 +325,7 @@ func _connect_room(kind: String, format_value: String, role_trial: bool = false,
 	for button in connect_buttons: button.disabled = true
 	var request := {"type":kind,"mode":"battle","format":format_value,"role":"commander","team":"auto","visualId":TankPortVisual.IDS[roster.selected],"tankId":"prototype"}
 	if practice: request["practice"] = true
+	if brisk: request["practicePreset"] = "brisk-v1"
 	if role_trial:
 		request["roleProtocol"] = 1
 		request["roleId"] = ROLE_IDS[role_selector.selected]
@@ -345,7 +351,13 @@ func own_player() -> Dictionary:
 	return {}
 
 func _network_error(message: String) -> void:
+	connect_buttons[0].get_parent().show()
 	role_selector.disabled = transport.is_recovering()
+	role_selector.show()
+	role_selector.select(0)
+	role_note.show()
+	role_note.text = "Role choice applies only to a handling trial."
+	for i in ROLE_IDS.size(): role_selector.set_item_text(i,RoleReadout.label(ROLE_IDS[i]))
 	_reset_track_histories()
 	guide_snapshot_msec = -1
 	if is_instance_valid(accepted_guide): accepted_guide.hide()
@@ -373,6 +385,31 @@ func _retire_objective_state() -> void:
 func _reset_track_histories() -> void:
 	for visual in peers.values():
 		if is_instance_valid(visual): visual.reset_track_history()
+
+# An optional summary of explicit readiness in the accepted roster, never a
+# local start decision. No summary is safer than an invented zero.
+static func _ready_totals(players: Array) -> String:
+	var total := Vector2i.ZERO
+	var ready := Vector2i.ZERO
+	for player in players:
+		if not player is Dictionary or not player.get("connected") is bool:
+			return ""
+		if not player.connected:
+			continue
+		if not player.get("ready") is bool:
+			return ""
+		match player.get("team"):
+			"blue":
+				total.x += 1
+				ready.x += int(player.ready)
+			"red":
+				total.y += 1
+				ready.y += int(player.ready)
+			_:
+				return ""
+	if total.x == 0 or total.y == 0:
+		return ""
+	return "Ready: Blue %d/%d · Red %d/%d" % [ready.x,total.x,ready.y,total.y]
 
 func _accept_state(snapshot: Dictionary) -> void:
 	if not presentation_prepared: return
@@ -425,13 +462,18 @@ func _accept_state(snapshot: Dictionary) -> void:
 	arena.update_bases(state.capture.bases)
 	var waiting: bool = state.get("staging",{}).get("waiting",false)
 	var own := own_player()
-	role_selector.disabled = not waiting or state.get("roleProtocol",0) != 1
-	for entry in state.get("roleCatalog",[]):
-		if entry is Dictionary and entry.get("id") in ROLE_IDS and (entry.get("forwardMps") is float or entry.get("forwardMps") is int):
-			var index: int = ROLE_IDS.find(entry.id)
-			role_selector.set_item_text(index,str(entry.id).capitalize()+" trial: "+str(entry.forwardMps)+" m/s")
-	var accepted_role: int = ROLE_IDS.find(own.get("roleId","prototype"))
-	role_selector.select(maxi(0,accepted_role))
+	var trial: bool = state.get("roleProtocol",0)==1
+	var entries: Dictionary = RoleReadout.catalog(state)
+	var role_id: String = str(own.get("roleId",""))
+	connect_buttons[0].get_parent().visible = not trial
+	role_selector.visible = trial
+	role_note.visible = trial
+	role_selector.disabled = not waiting or not trial or role_id not in entries
+	for i in ROLE_IDS.size():
+		var id: String = ROLE_IDS[i]
+		role_selector.set_item_text(i,RoleReadout.option(id,entries.get(id,{})))
+	role_selector.select(ROLE_IDS.find(role_id) if role_id in ROLE_IDS else -1)
+	role_note.text = RoleReadout.tradeoff(role_id,entries)
 	ready_button.disabled = not waiting
 	start_button.disabled = not state.get("staging",{}).get("canStart",false)
 	rejoin_button.disabled = transport.room_code.is_empty()
@@ -446,8 +488,6 @@ func _accept_state(snapshot: Dictionary) -> void:
 			members.append(str(player.id).to_upper()+ (" (you)" if player.id == state.playerId else "")+ (" [host]" if player.id == state.hostId else "")+ (" · reserved" if not player.connected else " · Ready" if player.get("ready",false) else " · not ready" if waiting else ""))
 		lines.append(team.to_upper()+" %d/4: " % members.size()+", ".join(members))
 	roster_label.text = "\n".join(lines)
-	if state.get("roleProtocol",0) == 1:
-		roster_label.text += "\nHandling trial: your accepted role is "+str(own.get("roleId","prototype"))+". Combat unchanged: 3 HP, 1 damage, 4 s reload."
 	if state.get("won",false) and not previous_won:
 		paused_controls = true
 		_suspend_controls()
@@ -464,10 +504,13 @@ func _accept_state(snapshot: Dictionary) -> void:
 	if (own.health > 0) != previous_alive: _suspend_controls()
 	previous_alive = own.health > 0
 	var weapon := "Ready" if own.health > 0 and own.tank.reload <= 0 else "Reload %.1fs" % own.tank.reload
+	if trial and (role_id not in entries or own.tank.reload > float(entries[role_id].reloadSeconds)): weapon = "Status unavailable"
 	if own.health <= 0: weapon = "Scrapped · respawn %.1fs" % own.respawnSeconds
 	if state.get("won",false): weapon = "Match complete"
 	var objective: String = preload("res://scripts/capture_status.gd").describe(state,own)
 	stats_label.text = "%s · Hull %d/3 · %.1f km/h\nCannon: %s · Bases Blue %d / Red %d\n%s" % [str(own.team).to_upper(),own.health,absf(own.tank.speed)*3.6,weapon,state.scores.blue,state.scores.red,objective]
+	if state.get("practice",false) and state.get("practicePreset","")=="brisk-v1":
+		stats_label.text = "Brisk Practice · %.1f m/s drive target\n" % float(state.get("driveTargetMps",0)) + stats_label.text
 	# Waiting snapshots can retain zero health after Rematch; this is not a live death.
 	if waiting:
 		var readiness := "Ready." if own.get("ready",false) else "Choose Mark Ready."
@@ -476,6 +519,10 @@ func _accept_state(snapshot: Dictionary) -> void:
 		stats_label.text = "%s · Waiting for battle\n%s %s\n%s" % [str(own.team).to_upper(),readiness,start_hint,waiting_hint]
 	var staging_block = state.staging.get("block")
 	status_label.text = (str(staging_block) if staging_block != null else "All ready. Host: Start battle.") if waiting else "Match complete. Host can return everyone to the ready room." if state.get("won",false) else "Controls suspended; the online match continues." if paused_controls else "Live room "+transport.room_code
+	if waiting and staging_block == "Every player must mark Ready.":
+		var totals := _ready_totals(state.players)
+		if not totals.is_empty():
+			status_label.text = totals + "\n" + status_label.text
 	_refresh_combat_status()
 
 func _present_shot(shot: Dictionary) -> void:
@@ -643,6 +690,7 @@ func _dress_arena(data: Dictionary) -> void:
 	if not data.get("arches",[]).is_empty():
 		arena.get_node("MapDressing/BridgeStoneFascia/Fascia240Batched").hide()
 		preload("res://scripts/river_scenic_outlets.gd").reshape(arena.get_node("MapDressing/ScenicPerimeter"),data)
+		preload("res://scripts/east_scenic_ridge.gd").reshape(arena.get_node("MapDressing/ScenicPerimeter"))
 	var district = load("res://scripts/windmill_district.gd").new()
 	district.name = "WindmillDistrict"
 	district.build(data)

@@ -1,4 +1,15 @@
 extends Node3D
+const FARM_HOUSE := preload("res://assets/farm_house/west_farm_house.res")
+const FARM_ENCLOSURE := {
+ "farm-margin-hedge-a":preload("res://assets/farm_enclosure/farm-margin-hedge-a.res"),
+ "farm-margin-hedge-b":preload("res://assets/farm_enclosure/farm-margin-hedge-b.res"),
+ "farm-margin-hedge-c":preload("res://assets/farm_enclosure/farm-margin-hedge-c.res"),
+ "farm-margin-rocks-a":preload("res://assets/farm_enclosure/farm-margin-rocks-a.res"),
+ "farm-margin-rocks-b":preload("res://assets/farm_enclosure/farm-margin-rocks-b.res"),
+ "farm-margin-wall-a":preload("res://assets/farm_enclosure/farm-margin-wall-a.res"),
+ "farm-margin-wall-b":preload("res://assets/farm_enclosure/farm-margin-wall-b.res"),
+ "farm-margin-wall-c":preload("res://assets/farm_enclosure/farm-margin-wall-c.res"),
+}
 # Existing authored mesh resources, exact same placement contract as static server triangles.
 func build(data:Dictionary) -> void:
  var library=load("res://assets/map_dressing.tscn").instantiate()
@@ -11,6 +22,12 @@ func build(data:Dictionary) -> void:
   node.transform=Transform3D(source.transform.basis.scaled(Vector3(p.scale,p.scale*p.get("scaleY",1.0),p.scale)).rotated(Vector3.RIGHT,p.get("pitch",0.0)).rotated(Vector3.UP,p.get("yaw",0.0)),Vector3(p.x,p.y,p.z))
   if imported:source.free()
   add_child(node)
+  # The old 130-triangle house remains available for an old map. The installed
+  # 526-triangle contract includes the unchanged 12-triangle footing.
+  var revised_house:bool=p.id=="west-farm-house" and p.indices.size()==1578
+  if revised_house:
+   var house:MeshInstance3D=node.get_child(0);house.mesh=FARM_HOUSE;house.material_override=null
+   for s in house.mesh.get_surface_count():house.set_surface_override_material(s,null)
   if p.has("quay"):add_child(preload("res://scripts/quay_landing.gd").build(p))
   if p.has("cargoParts"):cargo.finish(node,p.asset,cargo_materials)
   if p.has("revetmentParts"):_add_revetment_parts(node,p,library)
@@ -44,7 +61,7 @@ func build(data:Dictionary) -> void:
    node.get_child(0).set_surface_override_material(2,wall)
    var roof=StandardMaterial3D.new();roof.albedo_color=Color("876148");roof.roughness=.92
    node.get_child(0).set_surface_override_material(1,roof)
-  if p.id in ["millers-cottage","west-farm-house"]:
+  if not revised_house and p.id in ["millers-cottage","west-farm-house"]:
    var plaster=StandardMaterial3D.new();plaster.albedo_color=Color("c4bda8");plaster.roughness=.96
    plaster.albedo_texture=load("res://assets/farm_plaster.png");plaster.uv1_triplanar=true;plaster.uv1_scale=Vector3.ONE*.5
    node.get_child(0).set_surface_override_material(3,plaster)
@@ -58,7 +75,10 @@ func build(data:Dictionary) -> void:
    var door_mesh:MeshInstance3D=node.get_child(0)
    var original:StandardMaterial3D=door_mesh.mesh.surface_get_material(0)
    var door:=ShaderMaterial.new()
-   door.shader=preload("res://assets/shaders/orchard_loading_door.gdshader")
+   door.shader=preload("res://assets/shaders/district_stone.gdshader")
+   door.set_shader_parameter("press_ink",preload("res://assets/orchard_press/press.png"))
+   door.set_shader_parameter("building_space",true)
+   door.set_shader_parameter("finish_kind",3)
    door.set_shader_parameter("original_colour",original.albedo_color)
    door.set_shader_parameter("original_roughness",original.roughness)
    door_mesh.set_surface_override_material(0,door)
@@ -82,7 +102,10 @@ func build(data:Dictionary) -> void:
   if p.id=="reservoir-valve":
    var finish=load("res://scripts/building_finish.gd");finish.apply(node.get_child(0),0,2,"53605b");finish.apply(node.get_child(0),1,2,"925f48")
   if p.id in ["reservoir-pipe","reservoir-elbow"]:_finish_utility_pipe(node)
-  if p.id.begins_with("farm-margin") or p.id.begins_with("orchard-wall"):
+  if FARM_ENCLOSURE.has(p.id) and p.indices.size()==FARM_ENCLOSURE[p.id].surface_get_array_index_len(0):
+   # Exact eight prebaked solids; old maps with the original geometry retain their kit mesh.
+   var part:MeshInstance3D=node.get_child(0);part.mesh=FARM_ENCLOSURE[p.id];part.material_override=null;part.set_surface_override_material(0,null)
+  elif p.id.begins_with("farm-margin") or p.id.begins_with("orchard-wall"):
    var material=StandardMaterial3D.new();material.roughness=.97
    material.albedo_color=Color("52623b") if p.asset=="hedgerow_4m" else Color("77776d")
    if p.asset=="low_stone_wall_4m":

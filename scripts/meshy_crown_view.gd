@@ -19,6 +19,7 @@ func build(data:Dictionary)->void:
  mesh.surface_set_material(0,material)
  var batches={}
  for tree in data.trees:
+  if preload("res://scripts/open_orchard_crowns.gd").TYPES.has(tree.id): continue
   var key=Vector2i(floori((tree.x+160)/80),floori((tree.z+160)/80))
   if not batches.has(key):batches[key]=[]
   batches[key].append(tree)
@@ -31,6 +32,7 @@ func build(data:Dictionary)->void:
    var yaw=fposmod(float(t.x)*1.73+float(t.z)*.91,TAU)
    mm.set_instance_transform(i,Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3.ONE*scale),Vector3(t.x,t.y+t.trunkHeight+t.crown*.45,t.z)))
   var batch=MultiMeshInstance3D.new();batch.multimesh=mm;add_child(batch)
+ preload("res://scripts/open_orchard_crowns.gd").add_batches(self,data.trees)
  set_meta("crown_count",data.trees.size());set_meta("source_radius",radius);set_meta("source_height",bounds.size.y)
  scene.free()
 
