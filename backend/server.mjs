@@ -239,8 +239,17 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         if (Object.hasOwn(msg,'practicePreset') && (networkMode!=='local' || msg.practicePreset!==BRISK_PRACTICE_ID || msg.practice!==true || msg.type!=='create' || msg.mode!=='battle' || msg.format!=='4v4' || Object.keys(msg).some(k=>!['type','mode','format','role','team','visualId','tankId','practice','practicePreset'].includes(k)))) throw new Error('Invalid practice preset');
         if (Object.hasOwn(msg,'roleProtocol') && msg.roleProtocol !== 1) throw new Error('Unknown role protocol');
         if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
-        if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k))) throw new Error('Invalid role admission');
+        if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId','nameProtocol','displayName'].includes(k))) throw new Error('Invalid role admission');
         if (Object.hasOwn(msg, 'practice') && (typeof msg.practice !== 'boolean' || msg.type !== 'create' || msg.mode !== 'battle' || msg.format !== '4v4' || msg.roleProtocol === 1)) throw new Error('Invalid practice request');
+        let displayName = null;
+        const named = Object.hasOwn(msg,'nameProtocol') || Object.hasOwn(msg,'displayName');
+        if(named){
+          if(msg.nameProtocol!==1 || !['create','join'].includes(msg.type) || msg.mode!=='battle' || msg.format!=='4v4' || msg.practice) throw new Error('Invalid display-name request');
+          const raw=msg.displayName;
+          if(typeof raw!=='string'||[...raw].length>80) throw new Error('Use a first name or nickname (1-20 characters).');
+          displayName=raw.replace(/^ +| +$/g,'');
+          if([...displayName].length<1||[...displayName].length>20||!/^[\p{L}\p{N}]/u.test(displayName)||/[^\p{L}\p{M}\p{N} '’-]/u.test(displayName)) throw new Error('Use a first name or nickname (1-20 characters).');
+        }
         let code = String(msg.code ?? '').toUpperCase();
         let room;
         if (msg.type === 'create') {
@@ -250,12 +259,14 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset })) : new Room({ mode: msg.mode, tankId: msg.tankId }); rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset })) : new Room({ mode: msg.mode, tankId: msg.tankId }); room.namedRoster=!!named; rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.
         if ((msg.mode ?? 'range') !== room.mode) throw new Error('Room mode mismatch. Open the matching range, slope, solo or battle link.');
         if (room.mode === 'battle' && battleFormat(msg.format) !== room.format) throw new Error('Room format mismatch. Open the matching 2v2 or 4v4 link.');
+        if(msg.type==='join' && named && room.practice) throw new Error('Practice rooms do not accept named multiplayer joins');
+        if(msg.type==='join' && !room.practice && room.mode==='battle' && room.format==='4v4' && !!room.namedRoster!==named) throw new Error('Room version mismatch. Open the same game version as the host.');
         if(msg.type==='join' && room.practicePreset===BRISK_PRACTICE_ID) throw new Error('Brisk Practice is a private one-human trial');
         if(msg.roleProtocol===1 && !room.selectRole)throw new Error('Role protocol mismatch');
         let token, role;
@@ -269,15 +280,16 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
             throw new Error('This identity already has a tank in the room');
           }
           role = msg.role;
-          if (room.selectRole) { if(Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId'].includes(k)))throw new Error('Invalid role admission'); const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];token=room.join(role,options); }
+          if (room.selectRole) { if(Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId','nameProtocol','displayName'].includes(k)))throw new Error('Invalid role admission'); const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];token=room.join(role,options); }
           else { if(Object.hasOwn(msg,'roleId'))throw new Error('Role trial unavailable'); token = room.join(role, msg); }
+          if (named) room.seat(token)[1].displayName=displayName;
           if (hosted) owners.set(room.seat(token)[1], admission.subject);
         }
         if (hostedAccess && msg.type === 'create') hostedAccess.roomOpened(code);
         clearTimeout(ticketExpiry);
         binding = { code, room, token, ...(room.format === '4v4' ? { probe: { due: performance.now() + PROBE_MS, nonce: null } } : {}) };
         socket.binding = binding;
-        send(socket, { type: 'joined', code, role, token, map: room.map, ...(room.mode === 'battle' ? room.identity(token) : {}) });
+        send(socket, { type: 'joined', code, role, token, map: room.map, ...(room.namedRoster ? {nameProtocol:1} : {}), ...(room.mode === 'battle' ? room.identity(token) : {}) });
         send(socket, { type: 'state', ...room.snapshot(token) });
       } catch (error) {
         send(socket, { type: 'error', message: error.message, ...(error.code ? { code: error.code } : {}) });

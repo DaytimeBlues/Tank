@@ -1,6 +1,7 @@
 extends Node3D
 
 var accepted_guide: Node3D
+var online_snapshot_time := -1.0
 var guide_snapshot_msec := -1
 const GUIDE_MAX_AGE_MSEC := 1000
 
@@ -16,8 +17,17 @@ var shot_effects: TankAcceptedShotEffects
 var projectile_view: Node3D
 var state: Dictionary = {}
 var status_label: Label
+var field_strip: Control
+var field_sight: Control
+var compact_battle := false
+var field_note: Label
+var status_stamp := -2
+var status_health := -2
+var status_reload := -2.0
+var status_flags := -1
 var combat_strip: Control
 var stats_label: Label
+var name_field: LineEdit
 var room_field: LineEdit
 var port_field: LineEdit
 const ROLE_IDS = ["prototype","flanker","generalist","anchor"]
@@ -29,6 +39,14 @@ var ready_button: Button
 var start_button: Button
 var rejoin_button: Button
 var connect_buttons: Array[Button] = []
+var entry_section: VBoxContainer
+var room_section: VBoxContainer
+var menu_scroll: ScrollContainer
+var details_button: Button
+var menu_details: VBoxContainer
+var menu_title: Label
+var team_labels: Dictionary = {}
+var join_button: Button
 var panel: PanelContainer
 var hud_panel: PanelContainer
 var paused_controls := false
@@ -37,6 +55,8 @@ var input_gate = preload("res://scripts/input_gate.gd").new()
 var window_focused := true
 var input_elapsed := 0.0
 var camera_seeded := false
+var zoom_label: Label
+var zoom_index := 0
 var orbit_yaw := 0.0
 var orbit_height := 12.0
 var roster_label: Label
@@ -109,10 +129,16 @@ func _ready() -> void:
 	_suspend_controls()
 	for button in connect_buttons: button.disabled = true
 	transport.joined.connect(func(code: String):
+		online_snapshot_time = -1.0
+		_clear_admitted_name()
 		_reset_track_histories()
+		_retire_hull_paint()
 		guide_snapshot_msec = -1
 		accepted_guide.hide()
 		combat_strip.retire()
+		field_strip.begin_epoch()
+		field_sight.hide()
+		map_view.clear_accepted_state()
 		room_field.text = code
 		camera_seeded = false
 		_suspend_controls()
@@ -125,6 +151,7 @@ func _ready() -> void:
 			add_child(arena)
 			arena.build(transport.map_data)
 			_dress_arena(transport.map_data)
+		arena.retire_objectives()
 		status_label.text = "Seat acknowledged. Waiting for its authoritative snapshot."
 	)
 	transport.state_received.connect(_accept_state)
@@ -164,7 +191,8 @@ func _button(text: String, parent: Node, callback: Callable) -> Button:
 		callback.call()
 		_suspend_controls()
 		_neutral()
-		get_viewport().gui_release_focus()
+		if not panel.visible:
+			get_viewport().gui_release_focus()
 	)
 	parent.add_child(result)
 	return result
@@ -175,7 +203,7 @@ func _build_ui() -> void:
 	panel = PanelContainer.new()
 	panel.position = Vector2(16,58)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.055,0.085,0.075,0.94)
+	style.bg_color = Color("122623")
 	style.content_margin_left = 16
 	style.content_margin_right = 16
 	style.content_margin_top = 12
@@ -183,8 +211,11 @@ func _build_ui() -> void:
 	style.corner_radius_top_left = 6
 	style.corner_radius_bottom_right = 6
 	panel.add_theme_stylebox_override("panel",style)
+	panel.add_theme_color_override("font_color",Color("f6f1db"))
 	canvas.add_child(panel)
 	var scroll := ScrollContainer.new()
+	menu_scroll = scroll
+	scroll.follow_focus = true
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
 	var content := VBoxContainer.new()
@@ -202,6 +233,13 @@ func _build_ui() -> void:
 	port_field.custom_minimum_size.x = 75
 	fields.add_child(port_field)
 	port_field.visible = not OS.has_feature("web")
+	name_field = LineEdit.new()
+	name_field.max_length = 80
+	name_field.placeholder_text = "First name or nickname"
+	name_field.accessibility_name = "Display name (required for multiplayer)"
+	_label("Display name (required for multiplayer)",content)
+	content.add_child(name_field)
+	content.move_child(fields,-1)
 	room_field = LineEdit.new()
 	room_field.placeholder_text = "Six-character room code"
 	room_field.max_length = 6
@@ -222,8 +260,18 @@ func _build_ui() -> void:
 			transport.send({"type":"selectRole","roleId":ROLE_IDS[index]})
 			role_selector.select(maxi(0,ROLE_IDS.find(own_player().get("roleId","prototype"))))
 	)
-	for field in [port_field,room_field]:
-		field.text_submitted.connect(func(_text: String): get_viewport().gui_release_focus())
+	name_field.text_submitted.connect(func(_text: String):
+		_suspend_controls(); _neutral()
+		if valid_display_name(name_field.text).is_empty():
+			status_label.text = "Enter a first name or nickname to join multiplayer."
+			name_field.grab_focus()
+		else: room_field.grab_focus()
+	)
+	room_field.text_submitted.connect(func(_text: String):
+		_suspend_controls(); _neutral()
+		if is_instance_valid(join_button) and not join_button.disabled: _connect_room("join","4v4")
+	)
+	port_field.text_submitted.connect(func(_text: String): name_field.grab_focus())
 	status_label = _label("Start Solo Practice to explore and shoot immediately. For multiplayer, create/join a room and mark Ready.",content)
 	var buttons := HFlowContainer.new()
 	content.add_child(buttons)
@@ -233,7 +281,7 @@ func _build_ui() -> void:
 	connect_buttons.append(_button("Join room",buttons,func(): _connect_room("join","4v4")))
 	if not OS.has_feature("web") or transport.browser_info().get("mode","")=="local":
 		connect_buttons.append(_button("Brisk Practice (speed trial)",buttons,func(): _connect_room("create","4v4",false,true,true)))
-	roster_label = _label("Room roster will appear here. No student names or email accounts are needed.",content)
+	roster_label = _label("Room roster will appear here. Use a first name or nickname, not a full name. No email account is needed.",content)
 	var ready_row := HFlowContainer.new()
 	content.add_child(ready_row)
 	ready_button = _button("Mark Ready",ready_row,func():
@@ -262,15 +310,21 @@ func _build_ui() -> void:
 	switch_button.disabled = true
 	# Ready/Start stay before a growing eight-seat roster in the scroll view.
 	content.move_child(ready_row,roster_label.get_index())
-	_label("W/S drive · A/D turn · pointer/arrows aim · Space/click fire. Right-drag looks around. Capture all 7 bases to win. Each hull takes 3 hits. The cannon strip shows when you can fire again. Online play continues while the menu is open.",content)
+	_label("W/S drive · A/D turn · arrows aim (left/right yaw, up/down elevation), Q zoom · Space/click fire. Right-drag looks around. Capture all 7 bases to win. Each hull takes 3 hits. The cannon strip shows when you can fire again. Online play continues while the menu is open.",content)
 	if OS.has_feature("web"):
 		_button("Private access / invitations",content,func():
 			var location = JavaScriptBridge.get_interface("location")
 			location.href = "/access"
 		)
+	_compact_room_layout(content,heading,ready_row)
 	toolbar = HBoxContainer.new()
 	toolbar.position = Vector2(16,16)
 	canvas.add_child(toolbar)
+	zoom_label = _label("Q: Zoom 1x",toolbar)
+	zoom_label.autowrap_mode=TextServer.AUTOWRAP_OFF
+	zoom_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	zoom_label.add_theme_color_override("font_color",Color("#bcebf5"))
+	zoom_label.add_theme_constant_override("outline_size",4)
 	_button("Menu / Room · Esc",toolbar,func():
 		paused_controls = not paused_controls
 		_show_room_panel()
@@ -284,18 +338,110 @@ func _build_ui() -> void:
 	hud_panel = PanelContainer.new()
 	hud_panel.add_theme_stylebox_override("panel",style.duplicate())
 	canvas.add_child(hud_panel)
-	stats_label = _label("W/S drive · A/D turn · right-drag look / pointer aim · Space / click fire\nEscape or focus loss cancels controls. Online play continues.",hud_panel)
+	stats_label = _label("W/S drive · A/D turn · arrows aim / Q 1x-2x-4x zoom / right-drag look · Space / click fire\nEscape or focus loss cancels controls. Online play continues.",hud_panel)
 	# Autowrap initially measures at a one-pixel width. Bound that minimum
 	# height before the parent container's first layout to keep this HUD onscreen.
 	stats_label.max_lines_visible = 5
+	field_note = _label("",hud_panel)
+	field_note.add_theme_font_size_override("font_size",16)
+	field_note.add_theme_color_override("font_color",Color("#f2f1e6"))
+	field_note.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	field_note.max_lines_visible=4
+	field_note.hide()
+	var field_plate: StyleBoxFlat=style.duplicate()
+	field_plate.bg_color=Color("#10212b")
+	field_plate.border_color=Color("#85dff1")
+	field_plate.border_width_left=3
+	hud_panel.add_theme_stylebox_override("panel",field_plate)
 	combat_strip = preload("res://scripts/combat_status_strip.gd").new()
 	canvas.add_child(combat_strip)
+	field_strip = preload("res://scripts/rangefinder_strip.gd").new()
+	canvas.add_child(field_strip)
+	field_strip.marker_changed.connect(map_view.set_marker)
+	field_sight = preload("res://scripts/rangefinder_sight.gd").new()
+	canvas.add_child(field_sight)
+	field_sight.hide()
+	field_strip.hide()
+
+func _compact_room_layout(content: VBoxContainer, heading: Label, _ready_row: Control) -> void:
+	# Structural translation of the approved FigCraft names-r2 entry/room wireframes.
+	# Existing widgets, callbacks, validation and accepted-state action gates are reused.
+	menu_details = VBoxContainer.new()
+	for child in content.get_children():
+		content.remove_child(child)
+		menu_details.add_child(child)
+	content.add_child(menu_details)
+	heading.reparent(content)
+	menu_title = _label("Play with your class",content)
+	menu_title.add_theme_font_size_override("font_size",24)
+	entry_section = VBoxContainer.new(); content.add_child(entry_section)
+	_label("First name or nickname (required for multiplayer)",entry_section)
+	name_field.reparent(entry_section)
+	name_field.custom_minimum_size.y = 40
+	_label("Join a room: enter the code from your host",entry_section)
+	var join_row := HBoxContainer.new(); entry_section.add_child(join_row)
+	room_field.reparent(join_row); room_field.custom_minimum_size.y = 44
+	join_button = connect_buttons[3]; join_button.reparent(join_row)
+	join_button.custom_minimum_size = Vector2(160,44)
+	var alternatives := HBoxContainer.new(); entry_section.add_child(alternatives)
+	connect_buttons[1].reparent(alternatives); connect_buttons[1].text = "Create room"
+	connect_buttons[0].reparent(alternatives); connect_buttons[0].text = "Solo practice"
+	for button in [connect_buttons[1],connect_buttons[0]]:
+		button.custom_minimum_size.y = 42; button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_label("Tank appearance",entry_section)
+	roster.reparent(entry_section)
+	roster.custom_minimum_size.y = 40
+	_label("All five models share handling in ordinary rooms. Only a handling trial changes role stats.",entry_section)
+	room_section = VBoxContainer.new(); content.add_child(room_section)
+	var teams := HBoxContainer.new(); room_section.add_child(teams)
+	teams.add_theme_constant_override("separation",16)
+	for team in ["blue","red"]:
+		var box := PanelContainer.new(); teams.add_child(box)
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var team_style := StyleBoxFlat.new()
+		team_style.bg_color = Color("29433e")
+		team_style.content_margin_left = 10;team_style.content_margin_right = 10
+		team_style.content_margin_top = 8;team_style.content_margin_bottom = 8
+		box.add_theme_stylebox_override("panel",team_style)
+		var label := _label("B / BLUE" if team == "blue" else "R / RED",box)
+		label.custom_minimum_size = Vector2(160,150)
+		label.focus_mode = Control.FOCUS_ALL
+		label.add_theme_font_size_override("font_size",16)
+		team_labels[team] = label
+	status_label.reparent(content)
+	status_label.add_theme_font_size_override("font_size",18)
+	var primary := HBoxContainer.new(); room_section.add_child(primary)
+	for button in [ready_button,start_button]:
+		button.reparent(primary);button.custom_minimum_size.y = 44;button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Status/blocker remains above the actions; teams remain paired and explicitly labelled.
+	status_label.reparent(room_section)
+	room_section.move_child(status_label,1)
+	var entry_status := _label("Use a nickname, not a full name. Solo needs no name.",entry_section)
+	entry_status.add_theme_font_size_override("font_size",16)
+	# Validation/error feedback must remain visible in entry as well as seated state.
+	status_label.reparent(content)
+	content.move_child(status_label,room_section.get_index())
+	room_section.move_child(primary,0)
+	details_button = _button("Tank / local setup / controls",content,func(): menu_details.visible = not menu_details.visible)
+	content.move_child(menu_details,-1);menu_details.hide()
+	content.move_child(heading,0)
+	room_section.hide()
+	roster_label.hide() # Kept as accepted-state summary for existing checks, not duplicate visual content.
+	name_field.focus_next = name_field.get_path_to(room_field)
+	room_field.focus_previous = room_field.get_path_to(name_field)
+	room_field.focus_next = room_field.get_path_to(join_button)
+	_show_room_panel()
+	# No backend or gameplay layout ownership moves here.
 
 func _fit_ui() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
-	panel.size = Vector2(minf(420,viewport_size.x-32),minf(470,viewport_size.y-220))
+	panel.size = Vector2(minf(800,viewport_size.x-32),minf(580,viewport_size.y-200))
 	map_view.size = Vector2(206,224)
 	map_view.position = Vector2(viewport_size.x-222,58)
+	field_strip.size = Vector2(274,82)
+	field_strip.position = Vector2((viewport_size.x-274)*0.5,8 if viewport_size.x>=960 else 58)
+	field_sight.size = Vector2(128,128)
+	field_sight.position = (viewport_size-field_sight.size)*0.5
 	if viewport_size.x < 720:
 		map_enabled = false
 		map_view.visible = false
@@ -303,17 +449,57 @@ func _fit_ui() -> void:
 	stats_label.size.x = stats_label.custom_minimum_size.x
 	hud_panel.position = Vector2(16,viewport_size.y-164)
 	hud_panel.size = Vector2(minf(420,viewport_size.x-32),148)
-	combat_strip.position = Vector2((viewport_size.x-320)/2 if viewport_size.x>=1200 else viewport_size.x-336,viewport_size.y-84)
-	combat_strip.visible = viewport_size.x>=900
+	combat_strip.position = Vector2(viewport_size.x-336,viewport_size.y-84)
+	combat_strip.visible = viewport_size.x>=760 and not panel.visible
+	compact_battle = viewport_size.x>=760
+	field_note.custom_minimum_size.x = minf(stats_label.custom_minimum_size.x,viewport_size.x-400) if compact_battle else stats_label.custom_minimum_size.x
+	_sync_battle_layout()
 
 func _backend_url() -> String:
 	return "ws://127.0.0.1:"+port_field.text.strip_edges()
 
 func _show_room_panel() -> void:
 	panel.visible = paused_controls or state.is_empty() or state.get("staging",{}).get("waiting",false) or state.get("won",false)
+	if is_instance_valid(field_strip):
+		_sync_battle_layout()
+		field_strip.visible = not panel.visible
+		field_sight.visible = not panel.visible and own_player().get("connected",false) and own_player().get("health",0)>0 and guide_snapshot_msec>=0 and Time.get_ticks_msec()-guide_snapshot_msec<=GUIDE_MAX_AGE_MSEC
+		field_sight.set_zoom(zoom_index)
+		combat_strip.visible = compact_battle and not panel.visible
+	if is_instance_valid(entry_section):
+		var seated := not own_player().is_empty()
+		entry_section.visible = not seated
+		room_section.visible = seated
+		menu_title.text = "Room " + transport.room_code if seated else "Play with your class"
+		var status_parent: Node = room_section.get_parent() if seated else entry_section
+		if status_label.get_parent() != status_parent: status_label.reparent(status_parent)
+		status_parent.move_child(status_label,entry_section.get_index()+1 if seated else 3)
+
+
+
+func _sync_battle_layout() -> void:
+	var battle := compact_battle and not panel.visible
+	field_note.visible = battle
+	stats_label.visible = not battle
+	var h := 112 if battle else 148
+	hud_panel.position.y = get_viewport().get_visible_rect().size.y-h-16
+	hud_panel.size = Vector2(minf(420,get_viewport().get_visible_rect().size.x-(380 if battle else 32)),h)
 
 static func normalized_bearing(offset: Vector2) -> float:
 	return atan2(offset.x,offset.y)/PI
+
+func _clear_admitted_name() -> void:
+	if is_instance_valid(name_field): name_field.clear()
+
+static func valid_display_name(raw: String) -> String:
+	if raw.length()>80: return ""
+	var name_value := raw
+	while name_value.begins_with(" "): name_value = name_value.substr(1)
+	while name_value.ends_with(" "): name_value = name_value.left(-1)
+	if name_value.is_empty() or name_value.length()>20: return ""
+	var pattern := RegEx.new()
+	pattern.compile("\\A[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N} '’-]*\\z")
+	return name_value if pattern.search(name_value)!=null else ""
 
 func _connect_room(kind: String, format_value: String, role_trial: bool = false, practice: bool = false, brisk: bool = false) -> void:
 	if not presentation_prepared:
@@ -322,8 +508,24 @@ func _connect_room(kind: String, format_value: String, role_trial: bool = false,
 		status_label.text = "Shot feedback could not prepare. Reload this page to retry." if presentation_preparation_complete else "Preparing shot feedback."
 		_neutral()
 		return
+	var display_name := "" if practice else valid_display_name(name_field.text)
+	if not practice and display_name.is_empty():
+		status_label.text = "Enter a first name or nickname (1-20 characters) to play multiplayer."
+		name_field.grab_focus()
+		return
+	if kind == "join":
+		var room_code := room_field.text.strip_edges().to_upper()
+		var code_pattern := RegEx.new(); code_pattern.compile("^[A-Z0-9]{6}$")
+		if code_pattern.search(room_code) == null:
+			status_label.text = "Enter the six-letter or number room code from your host."
+			room_field.grab_focus()
+			return
+		room_field.text = room_code
 	for button in connect_buttons: button.disabled = true
 	var request := {"type":kind,"mode":"battle","format":format_value,"role":"commander","team":"auto","visualId":TankPortVisual.IDS[roster.selected],"tankId":"prototype"}
+	if not practice:
+		request["nameProtocol"] = 1
+		request["displayName"] = display_name
 	if practice: request["practice"] = true
 	if brisk: request["practicePreset"] = "brisk-v1"
 	if role_trial:
@@ -334,6 +536,7 @@ func _connect_room(kind: String, format_value: String, role_trial: bool = false,
 	_retire_objective_state()
 	roster_label.text = "Connecting. Roster not yet confirmed."
 	_reset_track_histories()
+	_retire_hull_paint()
 	guide_snapshot_msec = -1
 	accepted_guide.hide()
 	old_shots.clear()
@@ -351,7 +554,7 @@ func own_player() -> Dictionary:
 	return {}
 
 func _network_error(message: String) -> void:
-	connect_buttons[0].get_parent().show()
+	entry_section.show()
 	role_selector.disabled = transport.is_recovering()
 	role_selector.show()
 	role_selector.select(0)
@@ -359,6 +562,7 @@ func _network_error(message: String) -> void:
 	role_note.text = "Role choice applies only to a handling trial."
 	for i in ROLE_IDS.size(): role_selector.set_item_text(i,RoleReadout.label(ROLE_IDS[i]))
 	_reset_track_histories()
+	_retire_hull_paint()
 	guide_snapshot_msec = -1
 	if is_instance_valid(accepted_guide): accepted_guide.hide()
 	status_label.text = message
@@ -378,9 +582,16 @@ func _network_error(message: String) -> void:
 	_show_room_panel()
 
 func _retire_objective_state() -> void:
+	online_snapshot_time = -1.0
 	if is_instance_valid(combat_strip): combat_strip.retire()
+	field_strip.begin_epoch()
+	field_sight.hide()
 	map_view.clear_accepted_state()
 	arena.retire_objectives()
+
+func _retire_hull_paint() -> void:
+	for id in peers:
+		peers[id].retire_health_paint()
 
 func _reset_track_histories() -> void:
 	for visual in peers.values():
@@ -416,6 +627,15 @@ func _accept_state(snapshot: Dictionary) -> void:
 	# Source-clock discontinuity or long snapshot gap: do not infer tread travel.
 	var old_time: float = float(state.get("time",-1))
 	var new_time: float = float(snapshot.get("time",0))
+	# Reject an older online snapshot atomically before any projection, controls
+	# or freshness timer advances. Equal simulation times may legitimately carry
+	# lobby/ready changes. A new admission resets this watermark; the supported
+	# legacy post-victory transition to a zero-clock waiting room begins a new one.
+	if not snapshot.get("singlePlayer",false):
+		if not is_finite(new_time) or new_time<0: return
+		var rematch_reset: bool = new_time==0 and state.get("won",false) and not snapshot.get("won",false) and snapshot.get("staging",{}).get("waiting",false)
+		if new_time<online_snapshot_time and not rematch_reset: return
+		online_snapshot_time=new_time
 	# Offline restart replaces the entire simulation, including its shot IDs
 	# and clock. Ignore retired epochs; never treat reordered online time as
 	# a reset. Older FIFO solo workers synchronously emit time zero on restart.
@@ -430,10 +650,18 @@ func _accept_state(snapshot: Dictionary) -> void:
 		elif new_time < old_time: return
 	if state.is_empty() or new_time < old_time or new_time-old_time > 1.0 or snapshot.get("staging",{}).get("waiting",false) or state.get("staging",{}).get("waiting",false):
 		_reset_track_histories()
+	var solo_restart: bool = snapshot.get("singlePlayer",false) and state.get("singlePlayer",false) and (snapshot.get("soloEpoch",0)!=state.get("soloEpoch",0) or (new_time==0.0 and old_time>0.0))
+	if state.is_empty() or solo_restart or (field_strip.seeded and new_time-field_strip.last_time>1.0) or snapshot.get("staging",{}).get("waiting",false)!=state.get("staging",{}).get("waiting",false) or snapshot.get("won",false):
+		field_strip.begin_epoch()
+	if not snapshot.get("staging",{}).get("waiting",true) and not snapshot.get("won",false):
+		field_strip.present(new_time,snapshot.get("capture",{}).get("bases",[]))
 	state = snapshot
 	projectile_view.accept(snapshot,float(Time.get_ticks_msec())/1000.0)
 	guide_snapshot_msec = Time.get_ticks_msec()
+	status_stamp = -2
 	map_view.update_map(snapshot,arena.source_data)
+	var own := own_player()
+	var live_paint: bool = transport.is_seated() and TankPortVisual.health_stamp(own)!=0 and not state.get("staging",{}).get("waiting",false) and not state.get("won",false)
 	var active_ids: Array = []
 	for player in state.players:
 		active_ids.append(player.id)
@@ -444,6 +672,7 @@ func _accept_state(snapshot: Dictionary) -> void:
 		var visual: TankPortVisual = peers[player.id]
 		if not player.get("connected",true): visual.reset_track_history()
 		visual.apply_player(player,player.id == state.playerId)
+		visual.present_health(player,live_paint)
 		if not player.get("connected",true) or state.get("staging",{}).get("waiting",false): visual.reset_track_history()
 		var shot = player.get("shot")
 		if shot is Dictionary:
@@ -455,17 +684,17 @@ func _accept_state(snapshot: Dictionary) -> void:
 		elif not old_shots.has(player.id): old_shots[player.id] = 0
 	for id in peers.keys():
 		if not id in active_ids:
+			peers[id].retire_health_paint()
 			peers[id].queue_free()
 			peers.erase(id)
 			old_shots.erase(id)
-	_update_accepted_guide()
-	arena.update_bases(state.capture.bases)
+	_update_accepted_guide(false)
+	arena.update_bases(state.capture.bases,state.get("won",false) or state.get("staging",{}).get("waiting",false))
 	var waiting: bool = state.get("staging",{}).get("waiting",false)
-	var own := own_player()
 	var trial: bool = state.get("roleProtocol",0)==1
 	var entries: Dictionary = RoleReadout.catalog(state)
 	var role_id: String = str(own.get("roleId",""))
-	connect_buttons[0].get_parent().visible = not trial
+	# Entry actions are separate from seated room controls.
 	role_selector.visible = trial
 	role_note.visible = trial
 	role_selector.disabled = not waiting or not trial or role_id not in entries
@@ -476,6 +705,7 @@ func _accept_state(snapshot: Dictionary) -> void:
 	role_note.text = RoleReadout.tradeoff(role_id,entries)
 	ready_button.disabled = not waiting
 	start_button.disabled = not state.get("staging",{}).get("canStart",false)
+	start_button.visible = state.get("playerId","") == state.get("hostId","")
 	rejoin_button.disabled = transport.room_code.is_empty()
 	ready_button.text = "Unready" if own.get("ready",false) else "Mark Ready"
 	switch_button.disabled = not waiting or state.staging.get("switchTo") == null
@@ -485,8 +715,9 @@ func _accept_state(snapshot: Dictionary) -> void:
 		var members: Array[String] = []
 		for player in state.players:
 			if player.team != team: continue
-			members.append(str(player.id).to_upper()+ (" (you)" if player.id == state.playerId else "")+ (" [host]" if player.id == state.hostId else "")+ (" · reserved" if not player.connected else " · Ready" if player.get("ready",false) else " · not ready" if waiting else ""))
+			members.append((str(player.displayName)+" · " if player.has("displayName") else "")+str(player.id).to_upper()+ (" (you)" if player.id == state.playerId else "")+ (" [host]" if player.id == state.hostId else "")+ (" · reserved" if not player.connected else " · Ready" if player.get("ready",false) else " · not ready" if waiting else ""))
 		lines.append(team.to_upper()+" %d/4: " % members.size()+", ".join(members))
+		if team_labels.has(team): team_labels[team].text = ("B / BLUE" if team == "blue" else "R / RED")+" %d/4 seats\n" % members.size()+"\n".join(members)
 	roster_label.text = "\n".join(lines)
 	if state.get("won",false) and not previous_won:
 		paused_controls = true
@@ -499,7 +730,9 @@ func _accept_state(snapshot: Dictionary) -> void:
 	previous_won = state.get("won",false)
 	_show_room_panel()
 	for button in connect_buttons: button.disabled = true
-	if own.is_empty(): return
+	if own.is_empty():
+		_refresh_combat_status()
+		return
 	if own.health > 0 and not previous_alive: camera_seeded = false
 	if (own.health > 0) != previous_alive: _suspend_controls()
 	previous_alive = own.health > 0
@@ -509,7 +742,12 @@ func _accept_state(snapshot: Dictionary) -> void:
 	if state.get("won",false): weapon = "Match complete"
 	var objective: String = preload("res://scripts/capture_status.gd").describe(state,own)
 	stats_label.text = "%s · Hull %d/3 · %.1f km/h\nCannon: %s · Bases Blue %d / Red %d\n%s" % [str(own.team).to_upper(),own.health,absf(own.tank.speed)*3.6,weapon,state.scores.blue,state.scores.red,objective]
+	if not waiting:
+		var field_context := preload("res://scripts/capture_status.gd").field_card(state,own,arena)
+		field_note.text = field_context if not field_context.is_empty() else "%s   /   %.0f km/h\n%s" % [str(own.team).to_upper(),absf(own.tank.speed)*3.6,objective]
+		if own.health<=0: field_note.text = "Scrapped   /   Respawn %.1f s" % own.respawnSeconds
 	if state.get("practice",false) and state.get("practicePreset","")=="brisk-v1":
+		field_note.text = "Brisk Practice  /  %.1f m/s\n" % float(state.get("driveTargetMps",0)) + field_note.text
 		stats_label.text = "Brisk Practice · %.1f m/s drive target\n" % float(state.get("driveTargetMps",0)) + stats_label.text
 	# Waiting snapshots can retain zero health after Rematch; this is not a live death.
 	if waiting:
@@ -531,7 +769,7 @@ func _present_shot(shot: Dictionary) -> void:
 	shot_effects.update(float(Time.get_ticks_msec())/1000.0,camera)
 	projectile_view.update(float(Time.get_ticks_msec())/1000.0)
 
-const CONTROL_KEYS = {KEY_W:"w", KEY_S:"s", KEY_A:"a", KEY_D:"d", KEY_LEFT:"left", KEY_RIGHT:"right", KEY_SPACE:"space"}
+const CONTROL_KEYS = {KEY_W:"w", KEY_S:"s", KEY_A:"a", KEY_D:"d", KEY_LEFT:"left", KEY_RIGHT:"right", KEY_UP:"up", KEY_DOWN:"down", KEY_Q:"q", KEY_SPACE:"space"}
 
 func _raw_controls() -> Dictionary:
 	var raw := {}
@@ -550,9 +788,17 @@ func _controls_eligible() -> bool:
 	return own_player().get("health",0) > 0
 
 func _pointer_over_ui(position: Vector2) -> bool:
-	return (panel != null and panel.visible and panel.get_global_rect().has_point(position)) or (hud_panel != null and hud_panel.visible and hud_panel.get_global_rect().has_point(position)) or (combat_strip != null and combat_strip.visible and combat_strip.get_global_rect().has_point(position)) or (toolbar != null and toolbar.get_global_rect().has_point(position)) or (map_view != null and map_view.visible and map_view.get_global_rect().has_point(position))
+	return (is_instance_valid(field_strip) and field_strip.visible and field_strip.seeded and Rect2(field_strip.position,Vector2(field_strip.size.x,82 if not field_strip.notice.is_empty() else 52)).has_point(position)) or (panel != null and panel.visible and panel.get_global_rect().has_point(position)) or (hud_panel != null and hud_panel.visible and hud_panel.get_global_rect().has_point(position)) or (combat_strip != null and combat_strip.visible and combat_strip.get_global_rect().has_point(position)) or (toolbar != null and toolbar.get_global_rect().has_point(position)) or (map_view != null and map_view.visible and map_view.ink_at(map_view.get_global_transform().affine_inverse()*position))
 
 func _input(event: InputEvent) -> void:
+	# Claim room-code Enter before generic GUI handling; repeat never retries admission.
+	if event is InputEventKey and event.keycode in [KEY_ENTER,KEY_KP_ENTER] and is_instance_valid(room_field) and room_field.has_focus():
+		if event.pressed and not event.echo:
+			_suspend_controls(); _neutral()
+			if is_instance_valid(join_button) and not join_button.disabled: _connect_room("join","4v4")
+		get_viewport().set_input_as_handled()
+		return
+
 	# Observe releases before GUI consumption. Authorization remains separate.
 	var key := ""
 	var pressed := false
@@ -575,12 +821,19 @@ func _input(event: InputEvent) -> void:
 		return
 	else:
 		input_gate.resume()
+	var was_down := input_gate.value(key) > 0
 	input_gate.edge(key,true,echo)
+	if key == "q" and not echo and not was_down and input_gate.value("q") > 0:
+		zoom_index = (zoom_index + 1) % 3
+		if is_instance_valid(field_sight): field_sight.set_zoom(zoom_index)
+		if is_instance_valid(zoom_label): zoom_label.text = "Q: Zoom %dx" % int(pow(2,zoom_index))
 	# A short fire tap must not be lost between the 20Hz periodic input sends.
 	if not echo and key in ["space","mouse1"] and _controls_eligible() and (not event is InputEventMouseButton or not _pointer_over_ui(event.position)):
 		if input_gate.command().fire: _send_fire_edge(input_gate.command())
 
 func _send_fire_edge(command: Dictionary) -> void:
+	var own := own_player()
+	if not own.get("tank", {}).has("gunPitch"): command.erase("elevate")
 	transport.send({"type":"input","input":command})
 
 func _neutral() -> void:
@@ -616,13 +869,35 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().gui_release_focus()
 
 func _refresh_combat_status() -> void:
-	if is_instance_valid(combat_strip): combat_strip.present(state,own_player(),presentation_prepared and transport.is_seated(),Time.get_ticks_msec()-guide_snapshot_msec if guide_snapshot_msec>=0 else -1,not _controls_eligible() or controls_blocked)
+	if not is_instance_valid(combat_strip): return
+	var own := own_player()
+	var health := int(own.get("health",-1))
+	var tank: Dictionary=own.get("tank",{})
+	var reload_value := float(tank.get("reload",-1))
+	var age := Time.get_ticks_msec()-guide_snapshot_msec if guide_snapshot_msec>=0 else -1
+	var seated := presentation_prepared and transport.is_seated()
+	var frozen := not _controls_eligible() or controls_blocked
+	var flags := int(seated)+2*int(frozen)+4*int(age>=0 and age<=GUIDE_MAX_AGE_MSEC)
+	if status_stamp==guide_snapshot_msec and health==status_health and reload_value==status_reload and flags==status_flags: return
+	status_stamp=guide_snapshot_msec
+	status_health=health
+	status_reload=reload_value
+	status_flags=flags
+	combat_strip.present(state,own,seated,age,frozen)
+	if not seated or age<0 or age>GUIDE_MAX_AGE_MSEC:
+		field_strip.begin_epoch()
+		field_sight.hide()
+		_retire_hull_paint()
+		if not map_view.snapshot.is_empty(): map_view.clear_accepted_state()
+		# Loss of freshness is unknown ownership, never a new neutral/owned claim.
+		arena.retire_objectives()
+		field_note.text = "Status unavailable. Waiting for a fresh update."
 	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="unavailable" and not state.is_empty(): stats_label.text = "Combat status unavailable.\nWaiting for a fresh server update."
 	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="paused": stats_label.text = stats_label.text.replace("Cannon: Ready","Cannon: Paused")
 	if is_instance_valid(combat_strip) and combat_strip.reading.mode=="ready": stats_label.text = stats_label.text.replace("Cannon: Paused","Cannon: Ready")
 
-func _update_accepted_guide() -> void:
-	_refresh_combat_status()
+func _update_accepted_guide(refresh_status := true) -> void:
+	if refresh_status: _refresh_combat_status()
 	if not is_instance_valid(accepted_guide): return
 	accepted_guide.hide()
 	var age := Time.get_ticks_msec()-guide_snapshot_msec
@@ -653,27 +928,26 @@ func _process(delta: float) -> void:
 	var own := own_player()
 	if not own.is_empty() and peers.has(own.id):
 		var target: Vector3 = peers[own.id].position
-		var heading := Vector3(sin(own.tank.yaw+orbit_yaw),0,cos(own.tank.yaw+orbit_yaw))
-		var desired := target-heading*20+Vector3.UP*orbit_height
+		var heading := Vector3(sin(own.tank.yaw+(float(own.tank.turret) if zoom_index > 0 else orbit_yaw)),0,cos(own.tank.yaw+(float(own.tank.turret) if zoom_index > 0 else orbit_yaw)))
+		var zoom := pow(2.0, zoom_index)
+		# Back off enough to keep the hull inside a narrower turret-aligned view.
+		var desired := target-heading*(20.0*sqrt(zoom))+Vector3.UP*(orbit_height if zoom_index == 0 else 9.0*sqrt(zoom))
 		camera.position = camera_obstruction.update(target+Vector3.UP*1.4,camera.position,desired,delta,camera_seeded)
-		camera.fov = camera_obstruction.framing_fov(target+Vector3.UP*1.4,camera.position,camera.fov,delta,camera_seeded)
+		camera.fov = camera_obstruction.framing_fov(target+Vector3.UP*1.4,camera.position,camera.fov,delta,camera_seeded,rad_to_deg(2.0*atan(tan(deg_to_rad(55.0)*0.5)/zoom)))
 		if camera.position.distance_squared_to(target+Vector3.UP*1.4)>0.000001: camera.look_at(target+Vector3.UP*1.4)
 		camera_seeded = true
 	input_elapsed += delta
 	if input_elapsed < 0.05 or own.is_empty(): return
 	input_elapsed = 0
 	var command: Dictionary = input_gate.command()
-	var aim: float = command.aim
 	var over_ui := _pointer_over_ui(get_viewport().get_mouse_position())
 	if not _controls_eligible():
 		_suspend_controls()
 		_neutral()
 		return
 	if over_ui: command.fire = input_gate.value("space") > 0
-	if aim == 0 and not over_ui and input_gate.pointer_aim_allowed():
-		var mouse := get_viewport().get_mouse_position()
-		var point = Plane(Vector3.UP,own.tank.y).intersects_ray(camera.project_ray_origin(mouse),camera.project_ray_normal(mouse))
-		if point is Vector3: command["bearing"] = normalized_bearing(Vector2(point.x-own.tank.x,point.z-own.tank.z))
+
+	if not own.get("tank", {}).has("gunPitch"): command.erase("elevate")
 	transport.send({"type":"input","input":command})
 
 func _dress_arena(data: Dictionary) -> void:
@@ -708,6 +982,7 @@ func _dress_arena(data: Dictionary) -> void:
 	var farm_verge = load("res://scripts/farm_verge.gd").new()
 	farm_verge.name = "FarmVergeSkirt"
 	arena.add_child(farm_verge)
+	arena.add_child(load("res://scripts/millers_margin.gd").new())
 	var ground_factory = load("res://scripts/road_wear_material.gd")
 	for chunk in data.get("chunks",[]):
 		var mesh = arena.get_node_or_null(NodePath(str(chunk.id)))

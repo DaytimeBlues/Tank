@@ -1,6 +1,6 @@
 extends RefCounted
 # Per-control physical input gate; integrated only in the isolated candidate.
-const CONTROLS = ["w", "s", "a", "d", "left", "right", "space", "mouse1"]
+const CONTROLS = ["w", "s", "a", "d", "left", "right", "up", "down", "q", "space", "mouse1"]
 var down: Dictionary = {}
 var blocked: Dictionary = {}
 var ignored_hud_mouse := false
@@ -31,7 +31,5 @@ func edge(key: String, pressed: bool, echo := false) -> void:
 func value(key: String) -> float:
 	return 1.0 if eligible and down.get(key, false) and not blocked.get(key, false) else 0.0
 func command() -> Dictionary:
-	return {"throttle":value("w")-value("s"), "steer":value("a")-value("d"), "aim":value("left")-value("right"), "fire":value("space")+value("mouse1")>0}
+	return {"throttle":value("w")-value("s"), "steer":value("a")-value("d"), "aim":value("left")-value("right"), "elevate":value("up")-value("down"), "fire":value("space")+value("mouse1")>0}
 
-func pointer_aim_allowed() -> bool:
-	return eligible and not blocked.get("left",false) and not blocked.get("right",false)

@@ -57,7 +57,7 @@ export class BattleRoom {
     const preferred = anchors?.[p.lane] ?? { x: p.team === 'blue' ? -24 : 24, y: 2.5, z: p.lane === 0 ? -4 : 4 };
     const yaw = p.team === 'blue' ? Math.PI / 2 : -Math.PI / 2;
     if (!p.tank.quaternion) p.tank = { ...preferred, quaternion: { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, yaw,
-      pitch: 0, roll: 0, groundHeight: 1, speed: 0, terrain: 'bridge', turret: 0, reload: 0, heat: 0, tankId: this.tankId };
+      pitch: 0, roll: 0, groundHeight: 1, speed: 0, terrain: 'bridge', turret: 0, gunPitch: 0, reload: 0, heat: 0, tankId: this.tankId };
     const positions = Object.values(this.seats).filter(other => other !== p && other.drive).map(other => other.drive.body.translation());
     const clear = anchor => positions.every(pos => Math.hypot(pos.x - anchor.x, pos.z - anchor.z) >= 6);
     let spawn = preferred;
@@ -70,12 +70,12 @@ export class BattleRoom {
     // Zero mass preserves chassis tuning while covering the actual visible turret.
     this.world.createCollider(RAPIER.ColliderDesc.cuboid(.85, .4, 1).setTranslation(0, .75, 0).setMass(0), p.drive.body);
     p.health = tankProfile(this.tankId).health; p.input = {}; p.lastInput = this.time; p.respawnAt = null; p.shot = null;
-    p.tank = { ...p.drive.pose(), turret: 0, reload: 0, heat: 0, tankId: this.tankId }; return true;
+    p.tank = { ...p.drive.pose(), turret: 0, gunPitch: 0, reload: 0, heat: 0, tankId: this.tankId }; return true;
   }
   command(token, input) {
     const [, p] = this.seat(token); if (!p.connected) throw new Error('Disconnected session');
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid input');
-    if (Object.keys(input).some(k => !['throttle', 'steer', 'aim', 'bearing', 'fire', 'spot'].includes(k))) throw new Error('Invalid input field');
+    if (Object.keys(input).some(k => !['throttle', 'steer', 'aim', 'elevate', 'bearing', 'fire', 'spot'].includes(k))) throw new Error('Invalid input field');
     for (const [key, value] of Object.entries(input)) {
       if (['fire', 'spot'].includes(key)) { if (typeof value !== 'boolean') throw new Error('Invalid input'); }
       else if (!Number.isFinite(value) || Math.abs(value) > 1) throw new Error('Invalid input');
@@ -105,7 +105,7 @@ export class BattleRoom {
   fire(p) {
     if (!p.connected || !p.drive || !p.health || p.tank.reload > 0 || this.winner || !this.battleStarted()) return;
     if (this.projectilePool.active.length >= PROJECTILE_RULES.cap) return;
-    const probe = p.drive.cast(p.tank.turret), profile = p.drive.profile;
+    const probe = p.drive.cast(p.tank.turret, undefined, p.tank.gunPitch??0), profile = p.drive.profile;
     const id = ++this.shotId, direction = probe.direction;
     const shell = { id, ownerId:p.id, team:p.team, damage:profile.damage, bodyHandle:p.drive.body.handle,
       ...probe.origin, dx:direction.x, dy:direction.y, dz:direction.z, time:this.time };
@@ -160,7 +160,10 @@ export class BattleRoom {
       const turretRate = p.drive.profile.turretRadiansPerSecond;
       const delta = p.input.bearing === undefined ? (p.input.aim ?? 0) * turretRate * dt
         : Math.max(-turretRate * dt, Math.min(turretRate * dt, Math.atan2(Math.sin(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret), Math.cos(p.input.bearing * Math.PI - p.tank.yaw - p.tank.turret))));
-      if (!this.winner) p.tank.turret += delta;
+      if (!this.winner) {
+        p.tank.turret += delta;
+        p.tank.gunPitch = Math.max(-Math.PI/18,Math.min(Math.PI/6,(p.tank.gunPitch??0)+(p.input.elevate??0)*Math.PI/6*dt));
+      }
     }
     for (const p of Object.values(this.seats)) if (p.input.fire) this.fire(p);
     if (!this.winner) {
@@ -180,7 +183,7 @@ export class BattleRoom {
   }
   snapshot(token) {
     const own = Object.values(this.seats).find(p => p.token === token);
-    const players = Object.values(this.seats).map(p => ({ id: p.id, team: p.team, visualId: p.visualId, connected: p.connected,
+    const players = Object.values(this.seats).map(p => ({ id: p.id, ...(p.displayName ? {displayName:p.displayName} : {}), team: p.team, visualId: p.visualId, connected: p.connected,
       health: p.health, maxHealth: tankProfile(this.tankId).health, respawnSeconds: p.health ? 0 : Math.max(0, p.respawnAt - this.time),
       tank: { ...p.tank, ...(p.tank.quaternion ? { quaternion: { ...p.tank.quaternion } } : {}) }, shot: p.shot && { ...p.shot } }));
     const local = players.find(p => p.id === own?.id), scores = Object.fromEntries(['blue', 'red'].map(team => [team, this.bases.filter(b => b.owner === team).length]));

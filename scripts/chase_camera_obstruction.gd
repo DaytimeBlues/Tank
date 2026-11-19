@@ -63,9 +63,9 @@ func resolve(target:Vector3,candidate:Vector3,frame_radius:float=FRAME_RADIUS)->
  # camera distance by pushing through opaque cover.
  return target+direction*maxf(0.0,length*fraction-CLEARANCE)
 
-func framing_fov(target:Vector3,position:Vector3,current:float,delta:float,seeded:bool)->float:
+func framing_fov(target:Vector3,position:Vector3,current:float,delta:float,seeded:bool,base_fov:float=55.0)->float:
  var constrained=pre_blocker!="" or last_blocker!=""
- var wanted=55.0+25.0*clampf((8.0-target.distance_to(position))/4.0,0.0,1.0) if constrained else 55.0
+ var wanted=base_fov+(80.0-base_fov)*clampf((8.0-target.distance_to(position))/4.0,0.0,1.0) if constrained else base_fov
  # Match inward camera contraction without a lagging crop; restore the original
  # field of view smoothly as clearance returns. Open-road FOV remains exactly55.
  if not seeded or wanted>=current:return wanted

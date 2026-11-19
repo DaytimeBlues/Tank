@@ -1,4 +1,8 @@
 extends Node3D
+const WESTERN_FINISH := {
+ "windmill-tower":preload("res://assets/western_finish/windmill_landmark.res"),
+ "millers-cottage":preload("res://assets/western_finish/farm_cottage.res"),
+}
 const FARM_HOUSE := preload("res://assets/farm_house/west_farm_house.res")
 const FARM_ENCLOSURE := {
  "farm-margin-hedge-a":preload("res://assets/farm_enclosure/farm-margin-hedge-a.res"),
@@ -25,6 +29,12 @@ func build(data:Dictionary) -> void:
   # The old 130-triangle house remains available for an old map. The installed
   # 526-triangle contract includes the unchanged 12-triangle footing.
   var revised_house:bool=p.id=="west-farm-house" and p.indices.size()==1578
+  if WESTERN_FINISH.has(p.id):
+   # Same donor triangles/order, one shared opaque baked material per landmark.
+   # Scope these two playable instances only; distant scenery keeps its donors.
+   var building:MeshInstance3D=node.get_child(0)
+   building.mesh=WESTERN_FINISH[p.id];building.material_override=null
+   building.set_surface_override_material(0,null)
   if revised_house:
    var house:MeshInstance3D=node.get_child(0);house.mesh=FARM_HOUSE;house.material_override=null
    for s in house.mesh.get_surface_count():house.set_surface_override_material(s,null)
@@ -61,7 +71,7 @@ func build(data:Dictionary) -> void:
    node.get_child(0).set_surface_override_material(2,wall)
    var roof=StandardMaterial3D.new();roof.albedo_color=Color("876148");roof.roughness=.92
    node.get_child(0).set_surface_override_material(1,roof)
-  if not revised_house and p.id in ["millers-cottage","west-farm-house"]:
+  if not revised_house and p.id=="west-farm-house":
    var plaster=StandardMaterial3D.new();plaster.albedo_color=Color("c4bda8");plaster.roughness=.96
    plaster.albedo_texture=load("res://assets/farm_plaster.png");plaster.uv1_triplanar=true;plaster.uv1_scale=Vector3.ONE*.5
    node.get_child(0).set_surface_override_material(3,plaster)

@@ -11,6 +11,7 @@ var map_data: Dictionary = {}
 var room_code := ""
 var _token := ""
 var _request: Dictionary = {}
+var _session_names := false
 var _url := ""
 var _session_url := ""
 var _session_format := "4v4"
@@ -169,11 +170,17 @@ func poll() -> void:
 				_retire("Classroom connection was not acknowledged.")
 				return
 			socket.send_text(JSON.stringify(_request))
+			_request.erase("displayName") # Rejoin uses the opaque token, never the nickname.
 			_sent = true
 		while socket.get_available_packet_count() > 0:
 			var message = JSON.parse_string(socket.get_packet().get_string_from_utf8())
 			if not message is Dictionary: continue
 			if message.get("type") == "joined":
+				var expects_names: bool = _session_names if _request.get("type")=="reconnect" else _request.get("nameProtocol",0)==1
+				if expects_names and message.get("nameProtocol",0)!=1:
+					_retire("Room version mismatch. Reload the game before joining.",false)
+					return
+				_session_names = expects_names
 				var expected: String = _session_preset if _request.get("type")=="reconnect" else str(_request.get("practicePreset",""))
 				if message.get("practicePreset","")!=expected:
 					_retire("The server did not confirm the requested practice preset.",false)

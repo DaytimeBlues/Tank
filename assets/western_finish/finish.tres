@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/western_finish/architecture.jpg" id="1"]
+
+[resource]
+resource_name = "Western district | lime, linen and timber"
+albedo_texture = ExtResource("1")
+roughness = 0.94
+texture_repeat = false

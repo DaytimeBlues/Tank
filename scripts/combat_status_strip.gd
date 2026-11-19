@@ -1,7 +1,9 @@
 extends Control
 # Accepted-state instrument only; never predicts firing, damage or timer completion.
 var reading:Dictionary={"mode":"unavailable","status":"STATUS UNAVAILABLE","health":-1,"progress":0.0}
+var plate:=StyleBoxFlat.new()
 func _init():
+ plate.bg_color=Color("#10212b");plate.border_color=Color("#5b9caa");plate.set_border_width_all(1);plate.set_corner_radius_all(3)
  mouse_filter=Control.MOUSE_FILTER_IGNORE
  custom_minimum_size=Vector2(320,68)
  size=custom_minimum_size
@@ -24,9 +26,8 @@ func present(state:Dictionary,own:Dictionary,seated:bool,age:int,paused:bool)->v
  queue_redraw()
 func _draw():
  var font=ThemeDB.fallback_font
- var plate=StyleBoxFlat.new();plate.bg_color=Color(.035,.055,.065,.94);plate.border_color=Color("899c9b");plate.set_border_width_all(1);plate.set_corner_radius_all(5)
  draw_style_box(plate,Rect2(Vector2.ZERO,size))
- var ink=Color("eff5e8");var accent=Color("e8bf71") if reading.mode=="reload" else Color("b8dbb5")
+ var ink=Color("eff5e8");var accent=Color("e8bf71") if reading.mode=="reload" else Color("#85dff1")
  draw_string(font,Vector2(12,18),"CANNON",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("adbfbc"))
  draw_string(font,Vector2(12,39),reading.status,HORIZONTAL_ALIGNMENT_LEFT,-1,15,ink)
  draw_rect(Rect2(12,49,194,7),Color("344445"))

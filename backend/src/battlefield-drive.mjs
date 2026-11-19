@@ -44,8 +44,8 @@ export class BattlefieldDrive {
  shoulderAt(p){return this.map.shoulders?.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);}
  occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&!this.shoulderAt(p)&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
  garrisonOccupants(){return this.targets.filter(t=>t.captureTeam).map(t=>({id:'post-'+t.id,team:t.captureTeam,x:t.x,y:t.y,z:t.z,alive:t.hp>0,eligible:true,grounded:true}));}
- cast(turret,range=BATTLE_SHOT_RANGE){
-  const m=muzzle(this.pose(),turret,this.visualId),ray=new RAPIER.Ray(m.origin,m.direction);
+ cast(turret,range=BATTLE_SHOT_RANGE,elevation=0){
+  const m=muzzle(this.pose(),turret,this.visualId,elevation),ray=new RAPIER.Ray(m.origin,m.direction);
   const vertical=this.world.castRay(new RAPIER.Ray({x:m.origin.x,y:100,z:m.origin.z},{x:0,y:-1,z:0}),200,true,undefined,undefined,undefined,this.body,c=>this.supportHandles.has(c.handle));
   if(vertical&&m.origin.y<=100-vertical.timeOfImpact+.0001)return {origin:m.origin,direction:m.direction,distance:0,category:'terrain',target:null};
   // Donor only: reject obstruction between turret-plane mount and socket. Keep the accepted

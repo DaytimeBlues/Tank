@@ -21,7 +21,7 @@ func clear_accepted_state() -> void:
 
 func point(x: float, z: float) -> Vector2:
 	var span: float = map_data.get("size",320)
-	return Vector2(12+(x/span+0.5)*(size.x-24),30+(z/span+0.5)*(size.y-48))
+	return disc_center()+Vector2(x,z)*(disc_radius()*1.34/maxf(span,1.0))
 
 # Map-only proximity hint. It deliberately begins where the existing HUD's
 # radius+5m context ends; it does not infer visibility, capture, or ownership.
@@ -74,49 +74,75 @@ func header_text() -> String:
 	var compact := title + " [M]"
 	return compact if font.get_string_size(compact, HORIZONTAL_ALIGNMENT_LEFT, -1, HEADER_SIZE).x <= width else DEFAULT_HEADER
 
-func _draw() -> void:
-	draw_style_box(_background(),Rect2(Vector2.ZERO,size))
-	var font := ThemeDB.fallback_font
-	draw_string(font,Vector2(HEADER_INSET,19),header_text(),HORIZONTAL_ALIGNMENT_LEFT,-1,HEADER_SIZE,Color.WHITE)
-	if map_data.is_empty(): return
-	var water: Dictionary = map_data.water
-	var west := point(-float(water.w)/2.0,-160)
-	var east := point(float(water.w)/2.0,160)
-	draw_rect(Rect2(west,east-west),Color("426d77"))
-	for bridge in map_data.bridges:
-		var a := point(bridge.x-bridge.w/2.0,bridge.z-bridge.d/2.0)
-		var b := point(bridge.x+bridge.w/2.0,bridge.z+bridge.d/2.0)
-		draw_rect(Rect2(a,b-a),Color("bdad82"))
-	# Unknown is not neutral ownership. Keep only grey outlined static anchors.
-	if snapshot.is_empty():
-		for base in map_data.get("bases",[]):
-			var p := point(base.x,base.z)
-			draw_arc(p,5,0,TAU,16,Color("aaaaaa"),1.0)
-			draw_string(font,p+Vector2(7,4),str(base.id),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("cccccc"))
-		draw_string(font,Vector2(10,size.y-8),"State unavailable",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("cccccc"))
-		return
-	for base in snapshot.get("capture",{}).get("bases",[]):
-		var p := point(base.x,base.z)
-		var color := Color("79c9f0") if base.owner == "blue" else Color("ef9b88") if base.owner == "red" else Color("f1e6ba")
-		if base.owner == "blue": draw_rect(Rect2(p-Vector2(5,5),Vector2(10,10)),color)
-		elif base.owner == "red": draw_colored_polygon(PackedVector2Array([p+Vector2(0,-6),p+Vector2(6,5),p+Vector2(-6,5)]),color)
-		else: draw_circle(p,5,color)
-		draw_string(font,p+Vector2(7,4),str(base.id),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color.WHITE)
-		if base.get("contested",false): draw_arc(p,9,0,TAU,16,Color.WHITE,1.5)
-	for player in snapshot.get("players",[]):
-		var p := point(player.tank.x,player.tank.z)
-		var color := Color("6ac4ed") if player.team == "blue" else Color("f08c79")
-		if player.health <= 0: continue
-		var yaw: float = player.tank.yaw
-		var heading := Vector2(sin(yaw),cos(yaw))
-		var side := Vector2(heading.y,-heading.x)
-		draw_colored_polygon(PackedVector2Array([p+heading*5,p-heading*3+side*3,p-heading*3-side*3]),color)
-		if player.id == snapshot.get("playerId",""): draw_arc(p,7,0,TAU,16,Color.WHITE,1.5)
-	draw_string(font,Vector2(10,size.y-8),"Blue | Red | Neutral",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("deded4"))
+var marker_id := ""
+var glyph := ""
+const DARK := Color("#10212b")
+const GRID := Color("#42707b")
+const CYAN := Color("#85dff1")
+const AMBER := Color("#ffc272")
 
-func _background() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.04,0.08,0.07,0.93)
-	style.corner_radius_top_left = 5
-	style.corner_radius_bottom_right = 5
-	return style
+func disc_center() -> Vector2: return Vector2(size.x*0.5,(size.y+6)*0.5)
+func disc_radius() -> float: return minf(size.x*0.5-8,size.y*0.5-24)
+# Share the same painted regions between native GUI routing and world input.
+# Transparent corners belong to the battlefield, including right-drag free look.
+func ink_at(p: Vector2) -> bool:
+	if not Rect2(Vector2.ZERO,size).has_point(p) or disc_radius()<12: return false
+	return p.y<24 or (not map_data.is_empty() and p.y>=size.y-19) or p.distance_squared_to(disc_center())<=pow(disc_radius()+0.75,2)
+
+func _has_point(p: Vector2) -> bool: return ink_at(p)
+
+func set_marker(id: String, symbol: String) -> void:
+	if marker_id==id and glyph==symbol: return
+	marker_id=id
+	glyph=symbol
+	queue_redraw()
+
+func _draw() -> void:
+	var font := ThemeDB.fallback_font
+	var c := disc_center()
+	var r := disc_radius()
+	if r<12: return
+	draw_rect(Rect2(0,0,size.x,24),DARK)
+	draw_string(font,Vector2(0,17),header_text(),HORIZONTAL_ALIGNMENT_CENTER,size.x,HEADER_SIZE,Color.WHITE)
+	draw_circle(c,r,DARK)
+	draw_arc(c,r,0,TAU,64,CYAN,1.5,true)
+	draw_arc(c,r*0.62,0,TAU,48,GRID,1,true)
+	draw_arc(c,r*0.32,0,TAU,32,GRID,1,true)
+	draw_line(c-Vector2(r-2,0),c+Vector2(r-2,0),GRID)
+	draw_line(c-Vector2(0,r-2),c+Vector2(0,r-2),GRID)
+	if map_data.is_empty(): return
+	if map_data.has("water"):
+		var half_w := float(map_data.water.w)*0.5
+		var west := point(-half_w,-160)
+		draw_rect(Rect2(west,point(half_w,160)-west),Color("#284b59"))
+		for bridge in map_data.get("bridges",[]):
+			var a := point(bridge.x-bridge.w/2.0,bridge.z-bridge.d/2.0)
+			draw_rect(Rect2(a,point(bridge.x+bridge.w/2.0,bridge.z+bridge.d/2.0)-a),Color("#aab3a4"))
+	for base in map_data.get("bases",[]) if snapshot.is_empty() else snapshot.get("capture",{}).get("bases",[]):
+		var p := point(base.x,base.z)
+		var owner: String = base.get("owner","unknown")
+		if owner=="blue":
+			draw_rect(Rect2(p-Vector2(4,4),Vector2(8,8)),CYAN)
+		elif owner=="red":
+			draw_colored_polygon(PackedVector2Array([p+Vector2(0,-5),p+Vector2(5,4),p+Vector2(-5,4)]),AMBER)
+		else: draw_arc(p,4,0,TAU,12,Color.WHITE,1.3)
+		draw_string(font,p+Vector2(6,4),str(base.id),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color.WHITE)
+		if base.get("contested",false) or str(base.id)==marker_id:
+			draw_arc(p,8,0,TAU,20,Color.WHITE,1.5)
+		if str(base.id)==marker_id:
+			draw_circle(p+Vector2(-7,-9),7,DARK)
+			draw_string(font,p+Vector2(-14,-5),glyph,HORIZONTAL_ALIGNMENT_CENTER,14,12,Color.WHITE)
+	# Fixed public bases plus own marker only. Never reveal another player's position.
+	for player in snapshot.get("players",[]):
+		if player.get("id")!=snapshot.get("playerId") or not player.get("connected",false) or player.get("health",0)<=0: continue
+		var tank: Dictionary = player.get("tank",{})
+		if not tank.has_all(["x","z","yaw"]): break
+		var p := point(tank.x,tank.z)
+		var h := Vector2(sin(tank.yaw),cos(tank.yaw))
+		var side := Vector2(h.y,-h.x)
+		draw_circle(p,7,DARK)
+		draw_colored_polygon(PackedVector2Array([p+h*6,p-h*4+side*4,p-h*4-side*4]),Color.WHITE)
+		break
+	var caption := "State unavailable" if snapshot.is_empty() else "■ Blue   ▲ Red   ○ Neutral"
+	draw_rect(Rect2(0,size.y-19,size.x,19),DARK)
+	draw_string(font,Vector2(0,size.y-5),caption,HORIZONTAL_ALIGNMENT_CENTER,size.x,12,Color.WHITE)
