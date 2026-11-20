@@ -1,5 +1,6 @@
 extends Control
 # Accepted-state instrument only; never predicts firing, damage or timer completion.
+const Kit = preload("res://scripts/field_kit.gd")
 var reading:Dictionary={"mode":"unavailable","status":"STATUS UNAVAILABLE","health":-1,"progress":0.0}
 var plate:=StyleBoxFlat.new()
 func _init():
@@ -27,13 +28,14 @@ func present(state:Dictionary,own:Dictionary,seated:bool,age:int,paused:bool)->v
 func _draw():
  var font=ThemeDB.fallback_font
  draw_style_box(plate,Rect2(Vector2.ZERO,size))
- var ink=Color("eff5e8");var accent=Color("e8bf71") if reading.mode=="reload" else Color("#85dff1")
- draw_string(font,Vector2(12,18),"CANNON",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("adbfbc"))
- draw_string(font,Vector2(12,39),reading.status,HORIZONTAL_ALIGNMENT_LEFT,-1,15,ink)
- draw_rect(Rect2(12,49,194,7),Color("344445"))
- if reading.health>=0:draw_rect(Rect2(12,49,194*reading.progress,7),accent)
- draw_string(font,Vector2(229,18),"HULL",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("adbfbc"))
+ var accent=Kit.RED if reading.mode=="reload" else Kit.BLUE
+ draw_line(Vector2(212,10),Vector2(212,size.y-10),Kit.EDGE,1)
+ draw_string(font,Vector2(12,18),"CANNON",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Kit.MUTED)
+ draw_string(font,Vector2(12,40),reading.status,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Kit.PAPER)
+ draw_rect(Rect2(12,49,185,7),Color("#34474a"))
+ if reading.health>=0:draw_rect(Rect2(12,49,185*reading.progress,7),accent)
+ draw_string(font,Vector2(226,18),"HULL",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Kit.MUTED)
  for i in 3:
-  var box=Rect2(229+i*24,25,18,16)
-  draw_rect(box,ink if reading.health>i else Color("344445"));draw_rect(box,Color("adbfbc"),false,1)
- draw_string(font,Vector2(229,58),str(reading.health)+" / 3" if reading.health>=0 else "-- / 3",HORIZONTAL_ALIGNMENT_LEFT,-1,13,ink)
+  var box=Rect2(226+i*25,25,21,10)
+  draw_rect(box,Kit.PAPER if reading.health>i else Color("#34474a"));draw_rect(box,Kit.EDGE,false,1)
+ draw_string(font,Vector2(226,57),str(reading.health)+" / 3" if reading.health>=0 else "-- / 3",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Kit.PAPER)

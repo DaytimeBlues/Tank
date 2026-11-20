@@ -179,6 +179,8 @@
     "scripts/east_scenic_ridge.gd.uid",
     "scripts/farm_verge.gd",
     "scripts/farm_verge.gd.uid",
+    "scripts/field_kit.gd",
+    "scripts/field_kit.gd.uid",
     "scripts/hull_health_paint.gdshader",
     "scripts/hull_health_paint.gdshader.uid",
     "scripts/input_gate.gd",

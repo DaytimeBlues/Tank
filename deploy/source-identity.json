@@ -1,5 +1,5 @@
 {
-  "source": "32817dbc1591c06396d89902ca22587f938761b5",
-  "runtimeInventorySha256": "05bb43c51b4b6e805151f0748d275af6d47b153671cd48477749dfeab596bb58",
-  "scope": "Curated Tank pilot release candidate."
+  "source": "64887a1eb9af65428bee34852e9816e64fffe5ce",
+  "runtimeInventorySha256": "2221fe294a3ac4d51ac791c63ed81360035ce14ac8d359271e997adb8fb355f4",
+  "scope": "Tank pilot presentation-only: room layout, seven-base HUD, minimap and rangefinder. Existing classroom access and gameplay authority unchanged."
 }

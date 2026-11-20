@@ -1,5 +1,5 @@
 {
-  "source": "32817dbc1591c06396d89902ca22587f938761b5",
+  "source": "64887a1eb9af65428bee34852e9816e64fffe5ce",
   "files": [
     {
       "name": "index.apple-touch-icon.png",
@@ -19,7 +19,7 @@
     {
       "name": "index.html",
       "bytes": 5470,
-      "sha256": "f6370b87a18e9b8c18c265f63d088c67cca3903eb6b46bbf9949100df522d156"
+      "sha256": "84d6f652d7d157945fe3790160fefbfad54a33f0a837c609965528d3adb86e7a"
     },
     {
       "name": "index.icon.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 8062928,
-      "sha256": "f37d6360258c555562988bfbfd01624ad67e8fe18e667d5862abe0f624f86915"
+      "bytes": 8067956,
+      "sha256": "900d13fa82ebb26e9bb33135b9bb226a8d340873406c0a4d5efead1df50fb565"
     },
     {
       "name": "index.png",
@@ -205,7 +205,7 @@
     "scripts/accepted_track_travel.gd.uid": "58f6aab379be9e444e954f6d551545c892c0d09f78ece0cac858369d7f276b4e",
     "scripts/arena_view.gd": "a859280cb646795a804c361a49415c7fe191ee0959c1536e28d8d7141182e88a",
     "scripts/arena_view.gd.uid": "57e0c27bd3805e9c638981348b93b51040acc53eae4242587c915ab4e459d1de",
-    "scripts/battle_map.gd": "9bf4e39e913ace39c82622a9499bd757597100b989b97c0687733ce6845f13aa",
+    "scripts/battle_map.gd": "91c6d3dd175dccc6dd9c49de5f34a30e062b31301919dea6ade98ff46a544b99",
     "scripts/battle_map.gd.uid": "03c658b87da9089f10665f9b83c8c39c701eee22fe8ec71e774df976847bdb7f",
     "scripts/bounded_impact_audio.gd": "68ea36c78edd100436fe3014b75876dac6bfae434b9b0219e687f00e34357707",
     "scripts/bounded_impact_audio.gd.uid": "169b686e9aa8e18826fa8a070d09eb26b6ba4643d306eabf049531e19d64600a",
@@ -215,7 +215,7 @@
     "scripts/capture_status.gd.uid": "40deb683724cb80f4a704fe8e4d2508a2acc93398ee762c36db5a66fb4f75968",
     "scripts/chase_camera_obstruction.gd": "309b6052d3cca1e65829658dfcce791ddd5c75fb3a9c71ff95aed8c459ff3dc4",
     "scripts/chase_camera_obstruction.gd.uid": "802cb23fe0b0a873b8e98d1644404aa825fced02fd5ac281ef866d9858eb52dd",
-    "scripts/combat_status_strip.gd": "660e92b07e5861625e2535327f4dab4dc9695687bc71c49102ab130f8718e44b",
+    "scripts/combat_status_strip.gd": "0e2212d7918bc48e63093a33cdde7fe3a5795aa6c9cb794750b0c28b27ec033d",
     "scripts/combat_status_strip.gd.uid": "a58d8cc9dfa44a783092806f9399140b5fbb15b55a6ca9b98d56d25c0046dce6",
     "scripts/depot_cargo.gd": "134ae67d18ed239e9e76fec91d04176a8e2bc861e2f400beb5520d6526e0327d",
     "scripts/depot_cargo.gd.uid": "e75238187441bd39d3d6f499e0d25e62878161b5a4382cf1d0e5201076cf3695",
@@ -227,6 +227,8 @@
     "scripts/east_scenic_ridge.gd.uid": "7e36afa71160222c7aaed9b59a1eeb0c99637025ec36d22597a15adff02d9dca",
     "scripts/farm_verge.gd": "7908f4e5ddba2a31c94b44dc81602e2e0c5ccffa4036a828cce9a5c825b49cd7",
     "scripts/farm_verge.gd.uid": "16f3c127bf6cbe46300b75a538036ad993e6f0670725b95c96ac131c9920f0a9",
+    "scripts/field_kit.gd": "a9d53e73b301ff40722afe1713ebd22e4fe769cddfc8c18cc4cc8927e71a3f8b",
+    "scripts/field_kit.gd.uid": "a41e7c20e846f7c1abb02b6d31a41b6e873f749d48c261045b8080cc4c21485a",
     "scripts/hull_health_paint.gdshader": "ea2e621dd8ced9715fe638b8f0e16905435de5b035cb223b859990061d9e3295",
     "scripts/hull_health_paint.gdshader.uid": "cf21fecfe7cf9976a47edef8060aa73dc0683cebb2c546f343c520ece54824fe",
     "scripts/input_gate.gd": "a62a2f56c1764f20a6a63ca3e050d119a57e5f56a2ad9ee6c8361279794e9468",
@@ -235,7 +237,7 @@
     "scripts/leichttraktor_wheels.gd.uid": "2239ca515eef2e537f7b813966340fb3eb889cbba85a22309593dc80c68d2f62",
     "scripts/low_foliage_view.gd": "d997b43976de50a3a379d302b627b665c6ffedefc4251a45a8d62a59b9e66e68",
     "scripts/low_foliage_view.gd.uid": "0a547acb19ad708fd23f0c17d233731ea26bc4f06e320d808107292f216b9694",
-    "scripts/main.gd": "5fecf179021c1b6452241dffc41bab938bc50bc6f681309e2172ee8218ee01dd",
+    "scripts/main.gd": "3951284d7af448a36503cf4b8e77a078428dda21090c8a5e79a70add77a4bd15",
     "scripts/main.gd.uid": "cd5058f9c9e7536e7f1a199d56e12d5be341ab638bc11961147067ab0e090af1",
     "scripts/meshy_crown_view.gd": "81d7a91d557f15ca90b74fae410069db5fca4190550ac355705369f32c61d5f5",
     "scripts/meshy_crown_view.gd.uid": "db84a19ee0a8316f5151fffb3b0d7b6856052912352c28134db93ad61eac47e8",
@@ -251,9 +253,9 @@
     "scripts/projectile_view.gd.uid": "06e434b4849fce511316f9a019c80ff0c923da3ff52da893dd643362a2160d67",
     "scripts/quay_landing.gd": "ea023eee966ef6a7d08fe21151db27d78d495dded5b3a4d16e19472df706b6f4",
     "scripts/quay_landing.gd.uid": "fea924a797cd9677f0a9e6e7a4f3e55a59a3de944be9c0a45b741d66dd9e67e0",
-    "scripts/rangefinder_sight.gd": "f135907a33380baa2f83290759c443b20405c6f336f266442bd01b1404984c4b",
+    "scripts/rangefinder_sight.gd": "25c42def4f6f57416abc33931e00d4a65018994635a102e68c3ac4ca375257f2",
     "scripts/rangefinder_sight.gd.uid": "cf13be08b79aab32dca7de38334150152b42f5a5a3a667deb3ae2c2422967adc",
-    "scripts/rangefinder_strip.gd": "415c84403d03f5b991949db864082ab7dadb071f75757dfe138c45824432926d",
+    "scripts/rangefinder_strip.gd": "6627a640ca2167168acb61ab19247ef9bd0959855e195e9d943b279bd0036500",
     "scripts/rangefinder_strip.gd.uid": "ed58172f807686ed5b2522db614e62b43d50c8fb3e5f8107cc61a9946c09b517",
     "scripts/river_scenic_outlets.gd": "1de9e3faaf893230fb91b33ad27308d627247a52e29be5016d5e523666527ab0",
     "scripts/river_scenic_outlets.gd.uid": "d1a519bda8f97abb279d857ea3c26c5e8daa3915fb521c2aab0df340872be59c",

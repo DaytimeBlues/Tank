@@ -1,6 +1,7 @@
 extends Control
 # Public objective ledger: fixed arrays, updated on accepted snapshots only.
 # No player list or position enters this instrument. No match clock is invented.
+const Kit := preload("res://scripts/field_kit.gd")
 const CYAN := Color("#84def2")
 const AMBER := Color("#ffbd64")
 const PAPER := Color("#f3f1e9")
@@ -108,20 +109,27 @@ func present(t: float, bases: Array) -> void:
 func _draw() -> void:
 	if not seeded: return
 	var font := ThemeDB.fallback_font
-	draw_rect(Rect2(0,0,size.x,52), PLATE)
-	draw_line(Vector2(0,0),Vector2(size.x,0),CYAN,2)
-	draw_string(font,Vector2(0,16),"BASE CONTROL",HORIZONTAL_ALIGNMENT_CENTER,size.x,12,PAPER)
-	draw_string(font,Vector2(8,38),"BLUE %d"%blue,HORIZONTAL_ALIGNMENT_LEFT,50,13,CYAN)
-	draw_string(font,Vector2(size.x-50,38),"%d RED"%red,HORIZONTAL_ALIGNMENT_RIGHT,42,13,AMBER)
-	var w := 22.0
-	var x := (size.x-7*w)/2
+	# Five-sided numbered badges keep their identity when an owner changes.
+	draw_rect(Rect2(0,0,size.x,52),Kit.PLATE)
+	draw_line(Vector2(1,1),Vector2(size.x-1,1),Kit.EDGE,2)
+	draw_string(font,Vector2(0,17),"BASE CONTROL",HORIZONTAL_ALIGNMENT_CENTER,size.x,14,Kit.PAPER)
+	draw_string(font,Vector2(8,39),"BLUE %d"%blue,HORIZONTAL_ALIGNMENT_LEFT,62,16,Kit.BLUE)
+	draw_string(font,Vector2(size.x-67,39),"%d RED"%red,HORIZONTAL_ALIGNMENT_RIGHT,59,16,Kit.RED)
+	Kit.paint_owner(self,Vector2(63,33),3.5,"blue")
+	Kit.paint_owner(self,Vector2(size.x-63,33),3.5,"red")
+	var w := 30.0
+	var x := (size.x-7*w)*0.5
 	for i in 7:
-		var owner := codes[i]>>2
-		var col := CYAN if owner==1 else AMBER if owner==2 else MUTED
-		var box := Rect2(x+i*w,22,w-3,21)
-		draw_rect(box,col,owner!=0)
-		draw_string(font,box.position+Vector2(0,16),str(i+1)+("B" if owner==1 else "R" if owner==2 else ""),HORIZONTAL_ALIGNMENT_CENTER,box.size.x,12,PLATE if owner!=0 else PAPER)
-		if codes[i]%4==3: draw_line(box.position+Vector2(0,22),box.end+Vector2(0,1),PAPER,2)
+		var n := codes[i]>>2
+		var owner := "blue" if n==1 else "red" if n==2 else "neutral"
+		var left := x+i*w
+		var points := PackedVector2Array([Vector2(left,21),Vector2(left+27,21),Vector2(left+27,42),Vector2(left+13.5,48),Vector2(left,42)])
+		draw_colored_polygon(points,Color("#263c40"))
+		points.append(points[0])
+		draw_polyline(points,Kit.BLUE if n==1 else Kit.RED if n==2 else Kit.EDGE,1.4,true)
+		Kit.paint_owner(self,Vector2(left+7,33),3,owner)
+		draw_string(font,Vector2(left+12,40),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,16,Kit.PAPER)
+		if codes[i]%4==3: draw_line(Vector2(left+8,44),Vector2(left+20,44),Kit.PAPER,2)
 	if not notice.is_empty():
-		draw_rect(Rect2(0,56,size.x,26),PLATE)
-		draw_string(font,Vector2(0,75),notice,HORIZONTAL_ALIGNMENT_CENTER,size.x,15,PAPER)
+		draw_rect(Rect2(0,56,size.x,26),Kit.PLATE)
+		draw_string(font,Vector2(0,75),notice,HORIZONTAL_ALIGNMENT_CENTER,size.x,16,Kit.PAPER)

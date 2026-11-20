@@ -1,6 +1,7 @@
 class_name TankBattleMap
 extends Control
 
+const Kit := preload("res://scripts/field_kit.gd")
 const DEFAULT_HEADER := "SEVEN BASES · M to hide"
 const HEADER_SIZE := 13
 const HEADER_INSET := 10
@@ -121,11 +122,7 @@ func _draw() -> void:
 	for base in map_data.get("bases",[]) if snapshot.is_empty() else snapshot.get("capture",{}).get("bases",[]):
 		var p := point(base.x,base.z)
 		var owner: String = base.get("owner","unknown")
-		if owner=="blue":
-			draw_rect(Rect2(p-Vector2(4,4),Vector2(8,8)),CYAN)
-		elif owner=="red":
-			draw_colored_polygon(PackedVector2Array([p+Vector2(0,-5),p+Vector2(5,4),p+Vector2(-5,4)]),AMBER)
-		else: draw_arc(p,4,0,TAU,12,Color.WHITE,1.3)
+		Kit.paint_owner(self,p,4,owner)
 		draw_string(font,p+Vector2(6,4),str(base.id),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color.WHITE)
 		if base.get("contested",false) or str(base.id)==marker_id:
 			draw_arc(p,8,0,TAU,20,Color.WHITE,1.5)
@@ -143,6 +140,12 @@ func _draw() -> void:
 		draw_circle(p,7,DARK)
 		draw_colored_polygon(PackedVector2Array([p+h*6,p-h*4+side*4,p-h*4-side*4]),Color.WHITE)
 		break
-	var caption := "State unavailable" if snapshot.is_empty() else "■ Blue   ▲ Red   ○ Neutral"
 	draw_rect(Rect2(0,size.y-19,size.x,19),DARK)
-	draw_string(font,Vector2(0,size.y-5),caption,HORIZONTAL_ALIGNMENT_CENTER,size.x,12,Color.WHITE)
+	if snapshot.is_empty():
+		draw_string(font,Vector2(0,size.y-5),"State unavailable",HORIZONTAL_ALIGNMENT_CENTER,size.x,12,Kit.PAPER)
+		return
+	var x := (size.x-174.0)*0.5
+	for owner in ["blue","red","neutral"]:
+		Kit.paint_owner(self,Vector2(x+5,size.y-9),3.5,owner)
+		draw_string(font,Vector2(x+14,size.y-4),owner.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,-1,13,Kit.PAPER)
+		x += 54 if owner != "red" else 50

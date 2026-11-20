@@ -20,6 +20,8 @@ var status_label: Label
 var field_strip: Control
 var field_sight: Control
 var compact_battle := false
+const FieldKit := preload("res://scripts/field_kit.gd")
+var field_keys: Label
 var field_note: Label
 var status_stamp := -2
 var status_health := -2
@@ -202,16 +204,10 @@ func _build_ui() -> void:
 	add_child(canvas)
 	panel = PanelContainer.new()
 	panel.position = Vector2(16,58)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("122623")
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = 12
-	style.content_margin_bottom = 12
-	style.corner_radius_top_left = 6
-	style.corner_radius_bottom_right = 6
+	var style := FieldKit.plate(FieldKit.PLATE,FieldKit.EDGE,14,10)
+	style.border_width_top = 3
+	panel.theme = FieldKit.controls_theme()
 	panel.add_theme_stylebox_override("panel",style)
-	panel.add_theme_color_override("font_color",Color("f6f1db"))
 	canvas.add_child(panel)
 	var scroll := ScrollContainer.new()
 	menu_scroll = scroll
@@ -220,7 +216,7 @@ func _build_ui() -> void:
 	panel.add_child(scroll)
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.add_theme_constant_override("separation",8)
+	content.add_theme_constant_override("separation",4)
 	scroll.add_child(content)
 	var heading := _label("TANK BATTLE",content)
 	heading.add_theme_font_size_override("font_size",22)
@@ -272,7 +268,7 @@ func _build_ui() -> void:
 		if is_instance_valid(join_button) and not join_button.disabled: _connect_room("join","4v4")
 	)
 	port_field.text_submitted.connect(func(_text: String): name_field.grab_focus())
-	status_label = _label("Start Solo Practice to explore and shoot immediately. For multiplayer, create/join a room and mark Ready.",content)
+	status_label = _label("Use a nickname, not a full name. Solo needs no name.",content)
 	var buttons := HFlowContainer.new()
 	content.add_child(buttons)
 	connect_buttons.append(_button("SOLO PRACTICE - drive and shoot",buttons,func(): _connect_room("create","4v4",false,true)))
@@ -318,18 +314,20 @@ func _build_ui() -> void:
 		)
 	_compact_room_layout(content,heading,ready_row)
 	toolbar = HBoxContainer.new()
-	toolbar.position = Vector2(16,16)
+	toolbar.position = Vector2(16,12)
+	toolbar.theme = panel.theme
+	toolbar.add_theme_constant_override("separation",5)
 	canvas.add_child(toolbar)
-	zoom_label = _label("Q: Zoom 1x",toolbar)
+	zoom_label = _label("Q: 1x zoom",toolbar)
 	zoom_label.autowrap_mode=TextServer.AUTOWRAP_OFF
 	zoom_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	zoom_label.add_theme_color_override("font_color",Color("#bcebf5"))
-	zoom_label.add_theme_constant_override("outline_size",4)
-	_button("Menu / Room · Esc",toolbar,func():
+	zoom_label.add_theme_stylebox_override("normal",FieldKit.plate(FieldKit.PLATE,FieldKit.EDGE,4,4))
+	_button("Esc: Room",toolbar,func():
 		paused_controls = not paused_controls
 		_show_room_panel()
 	)
-	_button("Map · M",toolbar,func():
+	_button("M: Map",toolbar,func():
 		map_enabled = not map_enabled
 		map_view.visible = map_enabled
 	)
@@ -342,16 +340,37 @@ func _build_ui() -> void:
 	# Autowrap initially measures at a one-pixel width. Bound that minimum
 	# height before the parent container's first layout to keep this HUD onscreen.
 	stats_label.max_lines_visible = 5
-	field_note = _label("",hud_panel)
+	var field_stack := Control.new()
+	field_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_panel.add_child(field_stack)
+	field_note = _label("",field_stack)
+	field_note.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	field_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	field_note.offset_bottom = -22
+	field_note.clip_text = true
+	field_note.add_theme_constant_override("line_spacing",0)
 	field_note.add_theme_font_size_override("font_size",16)
 	field_note.add_theme_color_override("font_color",Color("#f2f1e6"))
 	field_note.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	field_note.max_lines_visible=4
 	field_note.hide()
+	field_keys = _label("WASD  drive     Arrows  aim     Space  fire",field_stack)
+	field_keys.add_theme_font_size_override("font_size",14)
+	field_keys.add_theme_color_override("font_color",FieldKit.MUTED)
+	field_keys.autowrap_mode = TextServer.AUTOWRAP_OFF
+	field_keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	field_keys.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	field_keys.offset_top = -20
+	field_keys.hide()
+	field_stack.resized.connect(_fit_field_text)
+	field_stack.hide()
 	var field_plate: StyleBoxFlat=style.duplicate()
 	field_plate.bg_color=Color("#10212b")
 	field_plate.border_color=Color("#85dff1")
 	field_plate.border_width_left=3
+	field_plate.border_width_top=1
+	field_plate.content_margin_top=3
+	field_plate.content_margin_bottom=3
 	hud_panel.add_theme_stylebox_override("panel",field_plate)
 	combat_strip = preload("res://scripts/combat_status_strip.gd").new()
 	canvas.add_child(combat_strip)
@@ -372,26 +391,32 @@ func _compact_room_layout(content: VBoxContainer, heading: Label, _ready_row: Co
 		menu_details.add_child(child)
 	content.add_child(menu_details)
 	heading.reparent(content)
-	menu_title = _label("Play with your class",content)
+	heading.text = "TANK BATTLE   /   FIELD KIT"
+	heading.add_theme_font_size_override("font_size",14)
+	heading.add_theme_color_override("font_color",FieldKit.BLUE)
+	menu_title = _label("Enter the battlefield",content)
 	menu_title.add_theme_font_size_override("font_size",24)
 	entry_section = VBoxContainer.new(); content.add_child(entry_section)
-	_label("First name or nickname (required for multiplayer)",entry_section)
+	_label("Player name",entry_section)
 	name_field.reparent(entry_section)
-	name_field.custom_minimum_size.y = 40
-	_label("Join a room: enter the code from your host",entry_section)
+	name_field.custom_minimum_size.y = 34
+	_label("Room code",entry_section)
 	var join_row := HBoxContainer.new(); entry_section.add_child(join_row)
-	room_field.reparent(join_row); room_field.custom_minimum_size.y = 44
+	room_field.reparent(join_row); room_field.custom_minimum_size.y = 36
 	join_button = connect_buttons[3]; join_button.reparent(join_row)
-	join_button.custom_minimum_size = Vector2(160,44)
+	join_button.custom_minimum_size = Vector2(92,36)
+	join_button.add_theme_stylebox_override("normal",FieldKit.plate(Color("#25494e"),FieldKit.BLUE))
 	var alternatives := HBoxContainer.new(); entry_section.add_child(alternatives)
 	connect_buttons[1].reparent(alternatives); connect_buttons[1].text = "Create room"
 	connect_buttons[0].reparent(alternatives); connect_buttons[0].text = "Solo practice"
 	for button in [connect_buttons[1],connect_buttons[0]]:
-		button.custom_minimum_size.y = 42; button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_label("Tank appearance",entry_section)
-	roster.reparent(entry_section)
-	roster.custom_minimum_size.y = 40
-	_label("All five models share handling in ordinary rooms. Only a handling trial changes role stats.",entry_section)
+		button.custom_minimum_size.y = 36; button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Appearance is optional; do not make every entrant pass it to reach Join.
+	var appearance := _label("Tank appearance  /  cosmetic in ordinary rooms",menu_details)
+	menu_details.move_child(appearance,roster.get_index())
+	for element in menu_details.get_children():
+		if element is Label and element != appearance and element != role_note and element != roster_label and element != status_label and not element.text.begins_with("W/S drive"):
+			element.hide()
 	room_section = VBoxContainer.new(); content.add_child(room_section)
 	var teams := HBoxContainer.new(); room_section.add_child(teams)
 	teams.add_theme_constant_override("separation",16)
@@ -399,7 +424,9 @@ func _compact_room_layout(content: VBoxContainer, heading: Label, _ready_row: Co
 		var box := PanelContainer.new(); teams.add_child(box)
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var team_style := StyleBoxFlat.new()
-		team_style.bg_color = Color("29433e")
+		team_style.bg_color = Color("#22363a")
+		team_style.border_color = FieldKit.BLUE if team == "blue" else FieldKit.RED
+		team_style.border_width_top = 2
 		team_style.content_margin_left = 10;team_style.content_margin_right = 10
 		team_style.content_margin_top = 8;team_style.content_margin_bottom = 8
 		box.add_theme_stylebox_override("panel",team_style)
@@ -407,22 +434,25 @@ func _compact_room_layout(content: VBoxContainer, heading: Label, _ready_row: Co
 		label.custom_minimum_size = Vector2(160,150)
 		label.focus_mode = Control.FOCUS_ALL
 		label.add_theme_font_size_override("font_size",16)
+		label.add_theme_constant_override("line_spacing",0)
 		team_labels[team] = label
 	status_label.reparent(content)
-	status_label.add_theme_font_size_override("font_size",18)
+	status_label.add_theme_font_size_override("font_size",16)
 	var primary := HBoxContainer.new(); room_section.add_child(primary)
 	for button in [ready_button,start_button]:
 		button.reparent(primary);button.custom_minimum_size.y = 44;button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Status/blocker remains above the actions; teams remain paired and explicitly labelled.
 	status_label.reparent(room_section)
 	room_section.move_child(status_label,1)
-	var entry_status := _label("Use a nickname, not a full name. Solo needs no name.",entry_section)
-	entry_status.add_theme_font_size_override("font_size",16)
 	# Validation/error feedback must remain visible in entry as well as seated state.
 	status_label.reparent(content)
 	content.move_child(status_label,room_section.get_index())
 	room_section.move_child(primary,0)
-	details_button = _button("Tank / local setup / controls",content,func(): menu_details.visible = not menu_details.visible)
+	details_button = _button("+  Setup & controls",content,func():
+		menu_details.visible = not menu_details.visible
+		details_button.text = "Close setup & controls" if menu_details.visible else "+  Setup & controls"
+		_fit_room_card()
+	)
 	content.move_child(menu_details,-1);menu_details.hide()
 	content.move_child(heading,0)
 	room_section.hide()
@@ -435,12 +465,14 @@ func _compact_room_layout(content: VBoxContainer, heading: Label, _ready_row: Co
 
 func _fit_ui() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
-	panel.size = Vector2(minf(800,viewport_size.x-32),minf(580,viewport_size.y-200))
+	_fit_room_card()
 	map_view.size = Vector2(206,224)
 	map_view.position = Vector2(viewport_size.x-222,58)
-	field_strip.size = Vector2(274,82)
-	field_strip.position = Vector2((viewport_size.x-274)*0.5,8 if viewport_size.x>=960 else 58)
-	field_sight.size = Vector2(128,128)
+	field_strip.size = Vector2(350,82)
+	field_strip.position = Vector2((viewport_size.x-field_strip.size.x)*0.5,8 if viewport_size.x>=960 else 58)
+	if viewport_size.x < 960:
+		field_strip.position.x = maxf(8,minf(field_strip.position.x,map_view.position.x-field_strip.size.x-8))
+	field_sight.size = Vector2(196,196)
 	field_sight.position = (viewport_size-field_sight.size)*0.5
 	if viewport_size.x < 720:
 		map_enabled = false
@@ -470,20 +502,42 @@ func _show_room_panel() -> void:
 		var seated := not own_player().is_empty()
 		entry_section.visible = not seated
 		room_section.visible = seated
-		menu_title.text = "Room " + transport.room_code if seated else "Play with your class"
+		menu_title.text = "Room " + transport.room_code if seated else "Enter the battlefield"
 		var status_parent: Node = room_section.get_parent() if seated else entry_section
 		if status_label.get_parent() != status_parent: status_label.reparent(status_parent)
 		status_parent.move_child(status_label,entry_section.get_index()+1 if seated else 3)
+		_fit_room_card()
 
 
+
+func _fit_room_card() -> void:
+	var available := get_viewport().get_visible_rect().size
+	var seated := is_instance_valid(room_section) and room_section.visible
+	var open := is_instance_valid(menu_details) and menu_details.visible
+	var card_width := 694 if seated else 404
+	if available.x >= 720 and is_instance_valid(map_view) and map_view.visible:
+		card_width = mini(card_width,int(available.x)-246)
+	var card_height := 520 if seated or open else 342
+	panel.position.y = 48 if available.y <= 600 else 58
+	panel.size = Vector2(clampf(available.x-32,1,card_width),clampf(available.y-panel.position.y-150,1,card_height))
+
+# The key strip is optional. Measure shaped, wrapped lines, not newline count;
+# critical accepted context always gets the full well when the key does not fit.
+func _fit_field_text() -> void:
+	var height := field_note.get_parent_control().size.y
+	var reading_height := field_note.get_line_count() * field_note.get_line_height()
+	field_keys.visible = field_note.visible and reading_height <= height-22
+	field_note.offset_bottom = -22 if field_keys.visible else 0
 
 func _sync_battle_layout() -> void:
 	var battle := compact_battle and not panel.visible
 	field_note.visible = battle
+	field_note.get_parent().visible = battle
 	stats_label.visible = not battle
-	var h := 112 if battle else 148
+	var h := 100 if battle else 128
 	hud_panel.position.y = get_viewport().get_visible_rect().size.y-h-16
 	hud_panel.size = Vector2(minf(420,get_viewport().get_visible_rect().size.x-(380 if battle else 32)),h)
+	_fit_field_text()
 
 static func normalized_bearing(offset: Vector2) -> float:
 	return atan2(offset.x,offset.y)/PI
@@ -749,6 +803,7 @@ func _accept_state(snapshot: Dictionary) -> void:
 	if state.get("practice",false) and state.get("practicePreset","")=="brisk-v1":
 		field_note.text = "Brisk Practice  /  %.1f m/s\n" % float(state.get("driveTargetMps",0)) + field_note.text
 		stats_label.text = "Brisk Practice · %.1f m/s drive target\n" % float(state.get("driveTargetMps",0)) + stats_label.text
+	_fit_field_text()
 	# Waiting snapshots can retain zero health after Rematch; this is not a live death.
 	if waiting:
 		var readiness := "Ready." if own.get("ready",false) else "Choose Mark Ready."
@@ -826,7 +881,7 @@ func _input(event: InputEvent) -> void:
 	if key == "q" and not echo and not was_down and input_gate.value("q") > 0:
 		zoom_index = (zoom_index + 1) % 3
 		if is_instance_valid(field_sight): field_sight.set_zoom(zoom_index)
-		if is_instance_valid(zoom_label): zoom_label.text = "Q: Zoom %dx" % int(pow(2,zoom_index))
+		if is_instance_valid(zoom_label): zoom_label.text = "Q: %dx zoom" % int(pow(2,zoom_index))
 	# A short fire tap must not be lost between the 20Hz periodic input sends.
 	if not echo and key in ["space","mouse1"] and _controls_eligible() and (not event is InputEventMouseButton or not _pointer_over_ui(event.position)):
 		if input_gate.command().fire: _send_fire_edge(input_gate.command())
