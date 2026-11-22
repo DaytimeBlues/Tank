@@ -1,5 +1,5 @@
 {
-  "source": "64887a1eb9af65428bee34852e9816e64fffe5ce",
+  "source": "6ef2e250812220c939c520e3e8e47baeb430ee5f",
   "files": [
     {
       "name": "index.apple-touch-icon.png",
@@ -18,8 +18,8 @@
     },
     {
       "name": "index.html",
-      "bytes": 5470,
-      "sha256": "84d6f652d7d157945fe3790160fefbfad54a33f0a837c609965528d3adb86e7a"
+      "bytes": 5471,
+      "sha256": "f2f3ca98ee4b76f0a17822bd7a02a0cbf866c53378843c5a8ae6a91842f78456"
     },
     {
       "name": "index.icon.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 8067956,
-      "sha256": "900d13fa82ebb26e9bb33135b9bb226a8d340873406c0a4d5efead1df50fb565"
+      "bytes": 10666012,
+      "sha256": "9fa58823fa324693d3e7664c3fd031f603b9cc0a0c32eba4195e9daadcf04b0e"
     },
     {
       "name": "index.png",
@@ -170,28 +170,29 @@
     "backend/public/tank-visual.mjs": "bd3ceed769f602268cca4bf3951ef296d8ef119af0bd6392e44cf04f4158a19d",
     "backend/run-godot-hosted.mjs": "7e7c9e7e57bbe50f9d5e19ab13d5a8194859ccfc112da8d16b9ae9721bd04899",
     "backend/run-godot-local.mjs": "6b18fd56dde43ac9d87d828255ce84c87fa5a5063918572b137e0b541f8773af",
-    "backend/server.mjs": "ae975229f52e6ce5841319927a3bb3c3a35371c780a3e6c7993fb1c0df34f2bc",
-    "backend/src/battle-room.mjs": "f5a24ff8158853c05f93c60f970ae1698758ad8f00507226ca728639692fe39c",
-    "backend/src/battlefield-drive.mjs": "1fae693c0fa8e6f300ef30933802ba6f38eb69fbfcd656a986f353d1004d6055",
+    "backend/server.mjs": "0904b550fc839c2b385a5bed4fa4cc1a81735f8ce648a28f2ebcd707198727f8",
+    "backend/src/battle-room.mjs": "955bf4aa3eda58f370298ef1c4cf02f149e0eea7f90b200554b685a705f051e5",
+    "backend/src/battlefield-drive.mjs": "29f8b54a3e7a8d54b8582e3e90ff7127b44e18981f42ad5535b3cd6ebc6960ea",
     "backend/src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",
     "backend/src/capture.mjs": "9bef0f37f314ddf960c2816e0a0c691edaaa299c119eefd596c30b20baae7d3e",
     "backend/src/grade-drive.mjs": "28c7a8830bb975fab890971af2f77328ec343f301648b25a94fc8f3bca6790dc",
     "backend/src/hosted-tickets.mjs": "ad589a6c0bc2c703cb150f8189171985d752baba6e58c8d17fcbfd7359733ed2",
-    "backend/src/online-battle.mjs": "966532514e7679917c85460cc6d9f9e29f8d87368999204c2159de5e9acccfbb",
+    "backend/src/online-battle.mjs": "f4301f4e3da574c96d8da6fce9d046e3013b22007a7d01e5deed5d179f93f987",
     "backend/src/private-access.mjs": "5abe88572f76249388be90108bff7df858415b144785cf012c6ebfba6ba0488d",
     "backend/src/projectiles.mjs": "dd227b2f5037bb4bb44caa6dc1f905389c3c4c9462372824483d6c5cdffc4e5d",
     "backend/src/river-crossings.mjs": "eee06d3085038bdaa04f596b1f70d3f8143b41b8af289dd0ece1a538f326c955",
     "backend/src/roadside-cover.mjs": "2337058c121d737f7842e838953b3eda87572d6e1f393aae9709d0c0a5d45b91",
     "backend/src/roadside-map.mjs": "ba25afe215c10b2f85e253eccfccb1ab07ebfe4b9411d78f3a5f060b702f2a47",
     "backend/src/room.mjs": "9f0080b3e81c55f841b576744a29251da13e01a2ce3682317117d48cc338b16f",
-    "backend/src/seat-roles.mjs": "e747dadd31a3b638374d933d0c35fde2a1a8c78d558aa5d383df10df448a0c7b",
+    "backend/src/seat-roles.mjs": "d234af3cf447a0f92cc96171672cee5d9dac23b195885762459aa323fe3d133e",
     "backend/src/server-config.mjs": "18b6175f167d6577730172c8d6c9005a30426d1cad24803ee1f439d1d773ad5a",
     "backend/src/session-token.mjs": "7ed1713db6ffda7b4c4066a5e2f6be5006a0a37fc5e12f9fa886fa8edae73ac9",
     "backend/src/solo-ai.mjs": "d846282942f329ad2e2907082c672faf09495b35ef5d5fecc8211e792167d76c",
     "backend/src/solo-map.mjs": "d5448b0987756423f27daa27c29cecaa1862f40d79bb5da7862badb75421efd1",
     "backend/src/solo-simulation.mjs": "ab13f5733b5e2308bb20e217e619d79811a480a56ba69388a2876a1dfd630ed8",
+    "backend/src/surface-identity.mjs": "d1656754cdb88ff63bf5ec5e34e2d1ae80e8675b4dab451e157caee841a1cca0",
     "backend/src/suspension.mjs": "b663fcc2e11bc5de978acdb91efdb9cca19c2a471a992efb7779d1218d756dd2",
-    "backend/src/terrain-query.mjs": "156244faa9f2d03b45627ba9b1f1b62689a30cafe020f1f7db345b645d74dbb1",
+    "backend/src/terrain-query.mjs": "cdbed2ff931cc95373b42d1c8ac15f7980074276f079af5bc919c4122abec607",
     "data/arena.json": "2d08b2dd63a6a38fbe44ddf978c532978e0cdd6af47014e4207c08e6a547d646",
     "data/low-foliage.json": "468b46692768cc029f593583ce14d31c418cbe69c98863d88c78aefcc6d83017",
     "data/millers_margin_points.json": "e8315cf86a394a7022488098a6c170f1618cb0f71ed6c7db7e34d0eb9b34b253",

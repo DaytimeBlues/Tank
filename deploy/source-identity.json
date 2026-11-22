@@ -1,5 +1,10 @@
 {
-  "source": "64887a1eb9af65428bee34852e9816e64fffe5ce",
-  "runtimeInventorySha256": "2221fe294a3ac4d51ac791c63ed81360035ce14ac8d359271e997adb8fb355f4",
-  "scope": "Tank pilot presentation-only: room layout, seven-base HUD, minimap and rangefinder. Existing classroom access and gameplay authority unchanged."
+  "source": "6ef2e250812220c939c520e3e8e47baeb430ee5f",
+  "runtimeInventorySha256": "b3687bd5f9850b7a5ac1e134af0c646330bf322e3b54b1b21253ceaf0ec91fb4",
+  "scope": "Prebuilt West Farm Broadside browser distribution and its matched server runtime. The source commit identifies server inputs. Existing editable Godot files on this branch describe the prior public client.",
+  "prebuiltClient": {
+    "pckSha256": "9fa58823fa324693d3e7664c3fd031f603b9cc0a0c32eba4195e9daadcf04b0e",
+    "testedCheckoutPathMapSha256": "d2f8d714de7461e99afe8524421ff6b5ab018bc412bbc112cfed5956f229d1ff",
+    "trackedAuthoringBaseline": "5dd736d4ce3060a5396433fabd8012b81ad2370b"
+  }
 }

@@ -142,6 +142,7 @@
     "backend/src/solo-ai.mjs",
     "backend/src/solo-map.mjs",
     "backend/src/solo-simulation.mjs",
+    "backend/src/surface-identity.mjs",
     "backend/src/suspension.mjs",
     "backend/src/terrain-query.mjs",
     "data/arena.json",
