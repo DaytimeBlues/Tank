@@ -206,6 +206,12 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           else binding.room.restart(binding.token);
           return;
         }
+        if (msg.type === 'setRoomSpeed') {
+          if (!binding?.room.setRoomSpeed) throw new Error('Room speed is available only in a multiplayer ready room');
+          if (Object.keys(msg).length !== 2 || !Object.hasOwn(msg,'mode')) throw new Error('Invalid room speed request');
+          binding.room.setRoomSpeed(binding.token, msg.mode);
+          return;
+        }
         if (msg.type === 'ready' || msg.type === 'start' || msg.type === 'switchTeam') {
           if (!binding) throw new Error('Join a room first');
           if (binding.room.format !== '4v4') throw new Error('Ready rooms are for online 4v4');
@@ -235,8 +241,9 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           }
           firstAdmission = null; // One admission attempt, including failed join or reconnect.
         }
-        if (['driveSpeed','speed','forwardMps','driveTargetMps'].some(k=>Object.hasOwn(msg,k))) throw new Error('Numeric drive overrides unavailable');
+        if (['driveSpeed','speed','forwardMps','driveTargetMps','roomSpeedMode','speedMultiplier'].some(k=>Object.hasOwn(msg,k))) throw new Error('Numeric drive overrides unavailable');
         if (Object.hasOwn(msg,'practicePreset') && (networkMode!=='local' || msg.practicePreset!==BRISK_PRACTICE_ID || msg.practice!==true || msg.type!=='create' || msg.mode!=='battle' || msg.format!=='4v4' || Object.keys(msg).some(k=>!['type','mode','format','role','team','visualId','tankId','practice','practicePreset'].includes(k)))) throw new Error('Invalid practice preset');
+        if (Object.hasOwn(msg,'roomSpeedProtocol') && (msg.roomSpeedProtocol !== 1 || msg.type !== 'create' || msg.mode !== 'battle' || msg.format !== '4v4' || msg.practice || msg.roleProtocol !== undefined)) throw new Error('Invalid room speed protocol');
         if (Object.hasOwn(msg,'roleProtocol') && msg.roleProtocol !== 1) throw new Error('Unknown role protocol');
         if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
         if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId','nameProtocol','displayName'].includes(k))) throw new Error('Invalid role admission');
@@ -259,7 +266,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset })) : new Room({ mode: msg.mode, tankId: msg.tankId }); room.namedRoster=!!named; rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset, roomSpeedControl: msg.roomSpeedProtocol === 1 })) : new Room({ mode: msg.mode, tankId: msg.tankId }); room.namedRoster=!!named; rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.

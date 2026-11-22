@@ -6,13 +6,13 @@ const EPS=1e-4;
 function vector(p) { if (!p || !['x','y','z'].every(k=>Number.isFinite(p[k]))) throw new Error('Finite vector required'); }
 // Resting primitives only: turret y1.65 minus rendered hull-centre offset1;
 // barrel centre z2.3 + half length1.75. No recoil or elevation contract.
-export function muzzle(pose,yaw,visualId='kestrel',elevation=0) {
+export function muzzle(pose,yaw,visualId='kestrel',elevation=0,secondary=false) {
  const profile=modelGunProfile(visualId);
  vector(pose); const q=pose.quaternion;
  if(!q || !['x','y','z','w'].every(k=>Number.isFinite(q[k])) || Math.abs(Math.hypot(q.x,q.y,q.z,q.w)-1)>1e-6 || !Number.isFinite(yaw)) throw new Error('Unit quaternion and finite turret required');
  if(!Number.isFinite(elevation)) throw new Error('Finite gun elevation required');
  // Preserve exact legacy primitive zero-elevation values and object shape.
- if(!profile.mount && elevation===0){
+ if(!secondary && !profile.mount && elevation===0){
   const offset=rotate(q,{x:4.05*Math.sin(yaw),y:.65,z:4.05*Math.cos(yaw)});
   const direction=rotate(q,{x:Math.sin(yaw),y:0,z:Math.cos(yaw)});
   return {origin:{x:pose.x+offset.x,y:pose.y+offset.y,z:pose.z+offset.z},direction};
@@ -26,6 +26,8 @@ export function muzzle(pose,yaw,visualId='kestrel',elevation=0) {
   const o=rotate(q,{x:px+(x-px)*c+(z-pz)*s,y:y-1,z:pz-(x-px)*s+(z-pz)*c});
   return {x:pose.x+o.x,y:pose.y+o.y,z:pose.z+o.z};
  };
+ // The generic game pod is authored in BarrelPitch space on every appearance.
+ if(secondary) return {origin:worldPoint([hx+.50,hy+.14,hz+1.0]),mount:worldPoint([hx,hy,hz]),direction:rotate(q,{x:s*ce,y:se,z:c*ce})};
  return {origin:worldPoint(profile.muzzle),...(profile.mount || elevation !== 0 ? {mount:worldPoint(profile.mount??profile.hinge,false)} : {}),direction:rotate(q,{x:s*ce,y:se,z:c*ce})};
 }
 // Finite observation/muzzle segment, explicitly supplied origins. Only the

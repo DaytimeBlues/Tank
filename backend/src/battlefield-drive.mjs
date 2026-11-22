@@ -1,3 +1,4 @@
+import {identifyCollider} from './surface-identity.mjs';
 import {riverGroundHeight} from './river-crossings.mjs';
 import { installRoadsideCover, installDistrictMeshes } from './roadside-cover.mjs';
 import RAPIER from '@dimforge/rapier3d-compat';
@@ -40,12 +41,22 @@ export class BattlefieldDrive {
  pose(){const p=this.body.translation(),q=this.body.rotation(),v=this.body.linvel(),f=rotate(q,{x:0,y:0,z:1}),right=rotate(q,{x:1,y:0,z:0}),bridge=this.map.bridges.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);
   return {x:p.x,y:p.y,z:p.z,quaternion:{...q},yaw:Math.atan2(f.x,f.z),pitch:Math.asin(Math.max(-1,Math.min(1,f.y)))*180/Math.PI,roll:Math.asin(Math.max(-1,Math.min(1,right.y)))*180/Math.PI,speed:v.x*f.x+v.y*f.y+v.z*f.z,groundHeight:bridge?.top??this.shoulderAt(p)?.top??riverGroundHeight(this.map,p.x,p.z,terrainHeight),terrain:bridge||this.shoulderAt(p)?'bridge':'grass'};
  }
+ // On-demand private observation of the last suspension update. No simulation or wire writes.
+ // Blockers are excluded by the support filter and need separate ray/manifold observation.
+ wheelSurfaceSnapshot(){
+  if(!this.vehicle)return [];
+  return Array.from({length:this.vehicle.numWheels()},(_,wheel)=>{
+   const contact=this.vehicle.wheelIsInContact(wheel);
+   const collider=contact?this.vehicle.wheelGroundObject(wheel):null;
+   return {wheel,contact,...identifyCollider(this,collider)};
+  });
+ }
  grounded(){let n=0;for(let i=0;i<this.vehicle.numWheels();i++)if(this.vehicle.wheelIsInContact(i))n++;return n>=2;}
  shoulderAt(p){return this.map.shoulders?.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);}
  occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&!this.shoulderAt(p)&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
  garrisonOccupants(){return this.targets.filter(t=>t.captureTeam).map(t=>({id:'post-'+t.id,team:t.captureTeam,x:t.x,y:t.y,z:t.z,alive:t.hp>0,eligible:true,grounded:true}));}
- cast(turret,range=BATTLE_SHOT_RANGE,elevation=0){
-  const m=muzzle(this.pose(),turret,this.visualId,elevation),ray=new RAPIER.Ray(m.origin,m.direction);
+ cast(turret,range=BATTLE_SHOT_RANGE,elevation=0,secondary=false){
+  const m=muzzle(this.pose(),turret,this.visualId,elevation,secondary),ray=new RAPIER.Ray(m.origin,m.direction);
   const vertical=this.world.castRay(new RAPIER.Ray({x:m.origin.x,y:100,z:m.origin.z},{x:0,y:-1,z:0}),200,true,undefined,undefined,undefined,this.body,c=>this.supportHandles.has(c.handle));
   if(vertical&&m.origin.y<=100-vertical.timeOfImpact+.0001)return {origin:m.origin,direction:m.direction,distance:0,category:'terrain',target:null};
   // Donor only: reject obstruction between turret-plane mount and socket. Keep the accepted

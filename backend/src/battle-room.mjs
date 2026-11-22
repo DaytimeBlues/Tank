@@ -9,6 +9,8 @@ import { VISUALS } from '../public/tank-visual.mjs';
 
 const failure = (message, code) => Object.assign(new Error(message), { code });
 const BLOCKED_SPAWN_GRACE = 2;
+// Game balance only: sixteen tags remove one pip; cannon health stays integral.
+const SECONDARY = Object.freeze({ interval: .20, range: 53, tagsPerPip: 16 });
 export const BATTLE_RULES = Object.freeze({ maxPlayers: 4, teamSize: 2, health: tankProfile().health, respawnSeconds: 5, reservationSeconds: 30 });
 export function validateBattleOptions({ team = 'auto', visualId = 'kestrel', tankId = 'prototype' } = {}) {
   if (!['auto', 'blue', 'red'].includes(team)) throw new Error('Unknown team');
@@ -70,14 +72,15 @@ export class BattleRoom {
     // Zero mass preserves chassis tuning while covering the actual visible turret.
     this.world.createCollider(RAPIER.ColliderDesc.cuboid(.85, .4, 1).setTranslation(0, .75, 0).setMass(0), p.drive.body);
     p.health = tankProfile(this.tankId).health; p.input = {}; p.lastInput = this.time; p.respawnAt = null; p.shot = null;
+    p.tags = 0; p.nextPulse = this.time; p.pulse = null;
     p.tank = { ...p.drive.pose(), turret: 0, gunPitch: 0, reload: 0, heat: 0, tankId: this.tankId }; return true;
   }
   command(token, input) {
     const [, p] = this.seat(token); if (!p.connected) throw new Error('Disconnected session');
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid input');
-    if (Object.keys(input).some(k => !['throttle', 'steer', 'aim', 'elevate', 'bearing', 'fire', 'spot'].includes(k))) throw new Error('Invalid input field');
+    if (Object.keys(input).some(k => !['throttle', 'steer', 'aim', 'elevate', 'bearing', 'fire', 'secondary', 'spot'].includes(k))) throw new Error('Invalid input field');
     for (const [key, value] of Object.entries(input)) {
-      if (['fire', 'spot'].includes(key)) { if (typeof value !== 'boolean') throw new Error('Invalid input'); }
+      if (['fire', 'secondary', 'spot'].includes(key)) { if (typeof value !== 'boolean') throw new Error('Invalid input'); }
       else if (!Number.isFinite(value) || Math.abs(value) > 1) throw new Error('Invalid input');
     }
     if (input.spot) throw new Error('Spotting unavailable in player battle');
@@ -116,6 +119,19 @@ export class BattleRoom {
     // Retain physical muzzle/mount obstruction guard; never tunnel out of cover.
     if(probe.distance <= .0001 && probe.category) { Object.assign(p.shot,{blocked:true,endX:probe.origin.x,endY:probe.origin.y,endZ:probe.origin.z});this.projectilePool.impact(shell,probe.origin,this.time,{blocked:true}); }
     else this.projectilePool.launch(shell);
+  }
+  pulse(p) {
+    if (!p.connected || !p.drive || !p.health || this.winner || !this.battleStarted() || this.time + 1e-9 < p.nextPulse) return;
+    p.nextPulse = this.time + SECONDARY.interval;
+    const probe = p.drive.cast(p.tank.turret, SECONDARY.range, p.tank.gunPitch ?? 0, true);
+    const victim = probe.bodyHandle === undefined ? null : Object.values(this.seats).find(other => other.drive?.body.handle === probe.bodyHandle);
+    const tagged = !!victim && victim.team !== p.team && victim.health > 0;
+    if (tagged && ++victim.tags === SECONDARY.tagsPerPip) {
+      victim.tags = 0;
+      if (--victim.health === 0) this.kill(victim);
+    }
+    const {origin:o, direction:d, distance:n} = probe;
+    p.pulse = {time:this.time, x:o.x, y:o.y, z:o.z, endX:o.x+d.x*n, endY:o.y+d.y*n, endZ:o.z+d.z*n, tag:tagged};
   }
   sweepProjectile(p,distance) {
     const owner=this.seats[p.ownerId];
@@ -166,6 +182,7 @@ export class BattleRoom {
       }
     }
     for (const p of Object.values(this.seats)) if (p.input.fire) this.fire(p);
+    for (const p of Object.values(this.seats)) if (p.input.secondary) this.pulse(p);
     if (!this.winner) {
       const occupants = Object.values(this.seats).filter(p => p.drive).map(p => ({ ...p.drive.occupant(p.connected), id: p.id, team: p.team, alive: p.health > 0 }));
       for (const event of advanceCaptures(this.bases, occupants, dt)) this.events.push({ ...event, id: ++this.eventId, time: this.time });
@@ -184,10 +201,11 @@ export class BattleRoom {
   snapshot(token) {
     const own = Object.values(this.seats).find(p => p.token === token);
     const players = Object.values(this.seats).map(p => ({ id: p.id, ...(p.displayName ? {displayName:p.displayName} : {}), team: p.team, visualId: p.visualId, connected: p.connected,
+      ...(p.pulse && this.time - p.pulse.time < .25 && !this.winner && this.battleStarted() ? {pulse:{...p.pulse}} : {}),
       health: p.health, maxHealth: tankProfile(this.tankId).health, respawnSeconds: p.health ? 0 : Math.max(0, p.respawnAt - this.time),
       tank: { ...p.tank, ...(p.tank.quaternion ? { quaternion: { ...p.tank.quaternion } } : {}) }, shot: p.shot && { ...p.shot } }));
     const local = players.find(p => p.id === own?.id), scores = Object.fromEntries(['blue', 'red'].map(team => [team, this.bases.filter(b => b.owner === team).length]));
-    return { ...this.projectilePool.snapshot(), mode: this.mode, time: this.time, players, playerId: own?.id ?? null, hostId: this.hostId, scores, winner: this.winner,
+    return { ...this.projectilePool.snapshot(), secondaryProtocol: 1, mode: this.mode, time: this.time, players, playerId: own?.id ?? null, hostId: this.hostId, scores, winner: this.winner,
       rules: this.rules, tank: local?.tank ?? null, targets: [], shot: local?.shot ?? null, seats: {},
       capture: { bases: this.bases.map(b => ({ ...b })), events: this.events.map(e => ({ ...e })), owned: scores.blue }, won: !!this.winner };
   }
