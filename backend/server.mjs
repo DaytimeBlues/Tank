@@ -103,6 +103,13 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
     try { path = new URL(req.url, 'http://localhost').pathname; }
     catch { res.writeHead(400, { 'Cache-Control': 'no-store' }); return res.end(); }
     if (path === '/health') { res.writeHead(closing ? 503 : 200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ project: 'tank-battle', version: '0.1.0', build, ready: !closing, networkMode })); }
+    if (networkMode === 'local' && /^\/local-room-map\/[A-Z0-9]{6}$/.test(path) && req.method === 'GET') {
+      const room = rooms.get(path.slice(-6));
+      const mapId = room?.mode === 'battle' && !room.practice
+        ? (room.map.id === 'redstone-quarry' ? 'redstone-quarry' : 'west-farm') : null;
+      res.writeHead(mapId ? 200 : 404, {'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+      return res.end(JSON.stringify({mapId}));
+    }
     if (hostedAccess) {
       if (closing) { res.writeHead(503, { 'Cache-Control': 'no-store' }); return res.end(); }
       try { if (!await hostedAccess.handleHttp(req, res, path)) return; }
@@ -248,6 +255,10 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         if (msg.roleProtocol === 1 && (msg.mode !== 'battle' || msg.format !== '4v4')) throw new Error('Role trial requires4v4');
         if (msg.roleProtocol === 1 && Object.keys(msg).some(k=>!['type','mode','format','role','team','tankId','visualId','code','token','roleProtocol','roleId','nameProtocol','displayName'].includes(k))) throw new Error('Invalid role admission');
         if (Object.hasOwn(msg, 'practice') && (typeof msg.practice !== 'boolean' || msg.type !== 'create' || msg.mode !== 'battle' || msg.format !== '4v4' || msg.roleProtocol === 1)) throw new Error('Invalid practice request');
+        if (Object.hasOwn(msg, 'mapId') && (msg.type !== 'create' || msg.mode !== 'battle' ||
+            msg.format !== '4v4' || msg.practice || msg.roleProtocol !== undefined || !['west-farm','redstone-quarry'].includes(msg.mapId))) {
+          throw new Error('Map selection is available when hosting a multiplayer room.');
+        }
         let displayName = null;
         const named = Object.hasOwn(msg,'nameProtocol') || Object.hasOwn(msg,'displayName');
         if(named){
@@ -266,7 +277,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
           if(msg.roleProtocol===1){const options={};for(const k of ['team','visualId','tankId','roleId'])if(Object.hasOwn(msg,k))options[k]=msg[k];validateSeatRoleAdmission(options);}
           if (rooms.size >= 24) throw new Error('Server full');
           do { code = randomInt(0, 36 ** 6).toString(36).padStart(6, '0').toUpperCase(); } while (rooms.has(code));
-          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset, roomSpeedControl: msg.roomSpeedProtocol === 1 })) : new Room({ mode: msg.mode, tankId: msg.tankId }); room.namedRoster=!!named; rooms.set(code, room);
+          room = msg.mode === 'battle' ? (msg.roleProtocol===1 ? createSeatRolePrototype() : createOnlineBattle({ mapId: msg.mapId, tankId: msg.tankId, format: msg.format, practice: msg.practice ?? false, practicePreset: msg.practicePreset, roomSpeedControl: msg.roomSpeedProtocol === 1 })) : new Room({ mode: msg.mode, tankId: msg.tankId }); room.namedRoster=!!named; rooms.set(code, room);
         } else { room = rooms.get(code); if (!room) throw new Error('Room not found'); }
         // Reject the requested view before allocating or reconnecting a seat.
         // Older range clients omit mode; slope clients must explicitly opt in.
@@ -296,7 +307,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         clearTimeout(ticketExpiry);
         binding = { code, room, token, ...(room.format === '4v4' ? { probe: { due: performance.now() + PROBE_MS, nonce: null } } : {}) };
         socket.binding = binding;
-        send(socket, { type: 'joined', code, role, token, map: room.map, ...(room.namedRoster ? {nameProtocol:1} : {}), ...(room.mode === 'battle' ? room.identity(token) : {}) });
+        send(socket, { type: 'joined', code, role, token, map: room.map.admission ?? room.map, ...(room.namedRoster ? {nameProtocol:1} : {}), ...(room.mode === 'battle' ? room.identity(token) : {}) });
         send(socket, { type: 'state', ...room.snapshot(token) });
       } catch (error) {
         send(socket, { type: 'error', message: error.message, ...(error.code ? { code: error.code } : {}) });

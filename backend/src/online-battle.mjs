@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { BattleRoom, BATTLE_RULES } from './battle-room.mjs';
 import { ROADSIDE_MAP } from './roadside-map.mjs';
+import { quarryMap, quarrySpawns } from '../quarry/map.mjs';
 import { SOLO_SPAWNS } from './solo-map.mjs';
 
 export const ONLINE_RULES = Object.freeze({ ...BATTLE_RULES, maxPlayers: 8, teamSize: 4 });
@@ -130,12 +131,17 @@ class BriskPractice extends OnlineFourBattle {
   identity(token) { return { ...super.identity(token), practicePreset: BRISK_PRACTICE_ID }; }
   snapshot(token) { return { ...super.snapshot(token), practicePreset: BRISK_PRACTICE_ID, driveTargetMps: BRISK_MPS }; }
 }
-export function createOnlineBattle({ tankId = 'prototype', format, practice = false, practicePreset, roomSpeedControl = false } = {}) {
+export function createOnlineBattle({ tankId = 'prototype', format, practice = false, practicePreset, roomSpeedControl = false, mapId = 'west-farm' } = {}) {
   if (practicePreset !== undefined && (practicePreset !== BRISK_PRACTICE_ID || practice !== true || format !== '4v4')) throw new Error('Invalid practice preset');
   if (typeof practice !== 'boolean' || practice && format !== '4v4') throw new Error('Invalid practice mode');
   format = battleFormat(format);
+  if (!['west-farm', 'redstone-quarry'].includes(mapId)) throw new Error('Unknown arena');
+  if (mapId === 'redstone-quarry' && (practice || format !== '4v4')) throw new Error('Redstone Quarry requires a two-player room.');
+  const configuration = mapId === 'redstone-quarry'
+    ? { rules: { ...ONLINE_RULES, maxPlayers: 2, teamSize: 1 }, map: quarryMap, spawns: quarrySpawns }
+    : { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS };
   const room = format === '4v4'
-    ? new (practicePreset === BRISK_PRACTICE_ID ? BriskPractice : !practice && roomSpeedControl ? SpeedReadyRoom : OnlineFourBattle)({ tankId, configuration: { rules: ONLINE_RULES, map: ROADSIDE_MAP, spawns: SOLO_SPAWNS } })
+    ? new (practicePreset === BRISK_PRACTICE_ID ? BriskPractice : !practice && roomSpeedControl ? SpeedReadyRoom : OnlineFourBattle)({ tankId, configuration })
     : new BattleRoom({ tankId });
   if (practice) {
     room.practice = true;

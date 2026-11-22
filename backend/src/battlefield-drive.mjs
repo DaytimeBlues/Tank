@@ -24,6 +24,7 @@ export class BattlefieldDrive {
   for(const w of this.map.walls)this.world.createCollider(RAPIER.ColliderDesc.cuboid(w.w/2,5,w.d/2).setTranslation(w.x,3,w.z));
   for(const b of this.map.blockers){const c=this.world.createCollider(RAPIER.ColliderDesc.cuboid(b.w/2,b.h/2,b.d/2).setTranslation(b.x,b.y,b.z));this.waterBlockers.add(c.handle);}
   for(const t of this.map.trees??[])this.world.createCollider(RAPIER.ColliderDesc.cylinder(t.trunkHeight/2,t.radius).setTranslation(t.x,t.y+t.trunkHeight/2,t.z));
+  this.map.installSolids?.(this.world, this.waterBlockers);
   installRoadsideCover(RAPIER,this.world,this.map.cover??[]);
   installRoadsideCover(RAPIER,this.world,this.map.landmarks??[]);
   this.districtColliders=installDistrictMeshes(RAPIER,this.world,this.map.districtMeshes??[]);
@@ -39,7 +40,7 @@ export class BattlefieldDrive {
  }
  step(dt,throttle,steer){const n=Math.ceil(dt/(1/120));for(let i=0;i<n;i++)differentialStep(this,dt/n,throttle,steer);}
  pose(){const p=this.body.translation(),q=this.body.rotation(),v=this.body.linvel(),f=rotate(q,{x:0,y:0,z:1}),right=rotate(q,{x:1,y:0,z:0}),bridge=this.map.bridges.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);
-  return {x:p.x,y:p.y,z:p.z,quaternion:{...q},yaw:Math.atan2(f.x,f.z),pitch:Math.asin(Math.max(-1,Math.min(1,f.y)))*180/Math.PI,roll:Math.asin(Math.max(-1,Math.min(1,right.y)))*180/Math.PI,speed:v.x*f.x+v.y*f.y+v.z*f.z,groundHeight:bridge?.top??this.shoulderAt(p)?.top??riverGroundHeight(this.map,p.x,p.z,terrainHeight),terrain:bridge||this.shoulderAt(p)?'bridge':'grass'};
+  return {x:p.x,y:p.y,z:p.z,quaternion:{...q},yaw:Math.atan2(f.x,f.z),pitch:Math.asin(Math.max(-1,Math.min(1,f.y)))*180/Math.PI,roll:Math.asin(Math.max(-1,Math.min(1,right.y)))*180/Math.PI,speed:v.x*f.x+v.y*f.y+v.z*f.z,groundHeight:bridge?.top??this.shoulderAt(p)?.top??(this.map.heightAt?.(p.x,p.z) ?? riverGroundHeight(this.map,p.x,p.z,terrainHeight)),terrain:bridge||this.shoulderAt(p)?'bridge':'grass'};
  }
  // On-demand private observation of the last suspension update. No simulation or wire writes.
  // Blockers are excluded by the support filter and need separate ray/manifold observation.
@@ -53,7 +54,7 @@ export class BattlefieldDrive {
  }
  grounded(){let n=0;for(let i=0;i<this.vehicle.numWheels();i++)if(this.vehicle.wheelIsInContact(i))n++;return n>=2;}
  shoulderAt(p){return this.map.shoulders?.find(b=>Math.abs(p.x-b.x)<=b.w/2&&Math.abs(p.z-b.z)<=b.d/2);}
- occupant(connected){const p=this.pose(),water=Math.abs(p.x)<8&&!this.shoulderAt(p)&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
+ occupant(connected){const p=this.pose(),water=this.map.inPond ? this.map.inPond(p.x,p.z) : Math.abs(p.x)<8&&!this.shoulderAt(p)&&![-80,0,80].some(z=>Math.abs(p.z-z)<8);return {id:'tank-1',team:'blue',...p,alive:true,eligible:!!connected&&!water,grounded:this.grounded()};}
  garrisonOccupants(){return this.targets.filter(t=>t.captureTeam).map(t=>({id:'post-'+t.id,team:t.captureTeam,x:t.x,y:t.y,z:t.z,alive:t.hp>0,eligible:true,grounded:true}));}
  cast(turret,range=BATTLE_SHOT_RANGE,elevation=0,secondary=false){
   const m=muzzle(this.pose(),turret,this.visualId,elevation,secondary),ray=new RAPIER.Ray(m.origin,m.direction);
