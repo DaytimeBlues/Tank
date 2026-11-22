@@ -1,5 +1,5 @@
 {
-  "source": "6ef2e250812220c939c520e3e8e47baeb430ee5f",
+  "source": "8ce809e4156488af75519580abd7573a1b8b1172",
   "files": [
     {
       "name": "index.apple-touch-icon.png",
@@ -19,7 +19,7 @@
     {
       "name": "index.html",
       "bytes": 5471,
-      "sha256": "f2f3ca98ee4b76f0a17822bd7a02a0cbf866c53378843c5a8ae6a91842f78456"
+      "sha256": "af6bd1d06ac4b2d2187f5cb1e370b82ac8979d14f00fcfe89e8a7b5476b20d81"
     },
     {
       "name": "index.icon.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 10666012,
-      "sha256": "9fa58823fa324693d3e7664c3fd031f603b9cc0a0c32eba4195e9daadcf04b0e"
+      "bytes": 13206660,
+      "sha256": "bc14405a4bdb4eb5615ace42c0086ea08cce00bdb61550cc3b11f23f5b2155f1"
     },
     {
       "name": "index.png",
@@ -131,6 +131,8 @@
     "assets/shaders/district_stone.gdshader.uid": "ff92ae407720eab5d131107ffc72981f93baf3f8418a94f0cc4408e58f1d49b7",
     "assets/shaders/orchard_loading_door.gdshader": "0244010bb7735d99e0fb09d9978b0d8b171502af5c3a53d00426b49bf2cce497",
     "assets/shaders/orchard_loading_door.gdshader.uid": "8b297b1ddfc053c917bb80b2cf3f39777553217d414493405b7dabf419727c0e",
+    "assets/ui/map_photo_credit.txt": "a00c9e3c2ae6025960d4853e323d18e22625e7bab13c35f393b7fb9729f9a9c8",
+    "assets/ui/quarry_map_photo_credit.txt": "f8bd02790a74a4779548330182e9f73d59fe7dc04a2ad80e6bd8dcc5430a03b0",
     "assets/western_finish/architecture.jpg": "6ecb5b1af70cf43ebfe405949e1d5dec57d8a2c0fd1d2e1ab983dd06e91079b3",
     "assets/western_finish/architecture.jpg.import": "2d056700b1caf91332fa01f0aa8fde6d033c3f7bdaf4cacd0bb2e104afa7cac6",
     "assets/western_finish/farm_cottage.res": "945e70e3c9b746bb443166410570787e830a44ab985ae49a05d2cc71e9027e57",
@@ -168,16 +170,22 @@
     "backend/public/style.css": "b7327881fea68fb0374f9372d5302e88bde32c91ab26de3eecb84481fd7daa49",
     "backend/public/tank-config.mjs": "d3743b751be5a371ee4a2f4e535ee0d7b8e8a008f31e5f20caf6af8d1ec11a15",
     "backend/public/tank-visual.mjs": "bd3ceed769f602268cca4bf3951ef296d8ef119af0bd6392e44cf04f4158a19d",
+    "backend/quarry/map.mjs": "af1b92a4df43424cbafb4a370d02855f867735d420dc95a00ad4f0dc60ed73e2",
+    "backend/quarry/metadata.json": "cbec9e5b67b627b5b9c75a3b5854e352dff92b54a2c9d180b98ee56d17dea441",
+    "backend/quarry/tile00.raw": "05d08d2e71cfec521ac8545761109892dc8e1ae842fb4c08f828a519fe4e0026",
+    "backend/quarry/tile01.raw": "24a2e05ede3435fbdc694c31b465d3e6abcd6df6fa466a8997227d22681c1e93",
+    "backend/quarry/tile10.raw": "27885326474e5cb4a67d131b27790576b82ba2af646c80efbd1c58cb6d27db03",
+    "backend/quarry/tile11.raw": "7850c2e7b8d88ebc33d15c49d845c4277026638915ee623c5770cdc21d9ac691",
     "backend/run-godot-hosted.mjs": "7e7c9e7e57bbe50f9d5e19ab13d5a8194859ccfc112da8d16b9ae9721bd04899",
     "backend/run-godot-local.mjs": "6b18fd56dde43ac9d87d828255ce84c87fa5a5063918572b137e0b541f8773af",
-    "backend/server.mjs": "0904b550fc839c2b385a5bed4fa4cc1a81735f8ce648a28f2ebcd707198727f8",
+    "backend/server.mjs": "2de156485866cb2fd563dde0b356d85f1d3d3915bd2432f8e2350c589e0247b5",
     "backend/src/battle-room.mjs": "955bf4aa3eda58f370298ef1c4cf02f149e0eea7f90b200554b685a705f051e5",
-    "backend/src/battlefield-drive.mjs": "29f8b54a3e7a8d54b8582e3e90ff7127b44e18981f42ad5535b3cd6ebc6960ea",
+    "backend/src/battlefield-drive.mjs": "506983dd8c755af9742a93c074c9c164c9b08b748e2bfcff9a39556774756127",
     "backend/src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",
     "backend/src/capture.mjs": "9bef0f37f314ddf960c2816e0a0c691edaaa299c119eefd596c30b20baae7d3e",
     "backend/src/grade-drive.mjs": "28c7a8830bb975fab890971af2f77328ec343f301648b25a94fc8f3bca6790dc",
     "backend/src/hosted-tickets.mjs": "ad589a6c0bc2c703cb150f8189171985d752baba6e58c8d17fcbfd7359733ed2",
-    "backend/src/online-battle.mjs": "f4301f4e3da574c96d8da6fce9d046e3013b22007a7d01e5deed5d179f93f987",
+    "backend/src/online-battle.mjs": "969bddab8cc35fb7c12dc2f0a0662cc5294124684124d30099d711bb50f3520a",
     "backend/src/private-access.mjs": "5abe88572f76249388be90108bff7df858415b144785cf012c6ebfba6ba0488d",
     "backend/src/projectiles.mjs": "dd227b2f5037bb4bb44caa6dc1f905389c3c4c9462372824483d6c5cdffc4e5d",
     "backend/src/river-crossings.mjs": "eee06d3085038bdaa04f596b1f70d3f8143b41b8af289dd0ece1a538f326c955",

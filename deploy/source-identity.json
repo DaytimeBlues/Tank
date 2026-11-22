@@ -1,10 +1,10 @@
 {
-  "source": "6ef2e250812220c939c520e3e8e47baeb430ee5f",
-  "runtimeInventorySha256": "b3687bd5f9850b7a5ac1e134af0c646330bf322e3b54b1b21253ceaf0ec91fb4",
-  "scope": "Prebuilt West Farm Broadside browser distribution and its matched server runtime. The source commit identifies server inputs. Existing editable Godot files on this branch describe the prior public client.",
+  "source": "8ce809e4156488af75519580abd7573a1b8b1172",
+  "runtimeInventorySha256": "2e3d1067f95db2746b62781ea0cd67b9147ae2ecf6e8671767bf718e471b482e",
+  "scope": "Prebuilt Tank Home 02 browser distribution with West Farm and Redstone Quarry. The source commit identifies the matched hosted runtime. Editable client files retained on this branch describe the prior public client.",
   "prebuiltClient": {
-    "pckSha256": "9fa58823fa324693d3e7664c3fd031f603b9cc0a0c32eba4195e9daadcf04b0e",
-    "testedCheckoutPathMapSha256": "d2f8d714de7461e99afe8524421ff6b5ab018bc412bbc112cfed5956f229d1ff",
+    "pckSha256": "bc14405a4bdb4eb5615ace42c0086ea08cce00bdb61550cc3b11f23f5b2155f1",
+    "testedCheckoutPathMapSha256": "fe6f196dff813311b26ee82f77e50854f3ce82e5bc58e552b92f33aca055d5f4",
     "trackedAuthoringBaseline": "5dd736d4ce3060a5396433fabd8012b81ad2370b"
   }
 }
