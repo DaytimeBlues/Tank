@@ -178,7 +178,7 @@
     "backend/quarry/tile11.raw": "7850c2e7b8d88ebc33d15c49d845c4277026638915ee623c5770cdc21d9ac691",
     "backend/run-godot-hosted.mjs": "7e7c9e7e57bbe50f9d5e19ab13d5a8194859ccfc112da8d16b9ae9721bd04899",
     "backend/run-godot-local.mjs": "6b18fd56dde43ac9d87d828255ce84c87fa5a5063918572b137e0b541f8773af",
-    "backend/server.mjs": "2de156485866cb2fd563dde0b356d85f1d3d3915bd2432f8e2350c589e0247b5",
+    "backend/server.mjs": "079ea9f5db927db0b799d59d162547fb11beaf195bc235f4f01ddfadfa86cbbd",
     "backend/src/battle-room.mjs": "955bf4aa3eda58f370298ef1c4cf02f149e0eea7f90b200554b685a705f051e5",
     "backend/src/battlefield-drive.mjs": "506983dd8c755af9742a93c074c9c164c9b08b748e2bfcff9a39556774756127",
     "backend/src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",

@@ -331,7 +331,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
     }
     if (!steps) return;
     for (const socket of wss.clients) if (socket.binding && (!hostedAccess || hostedAccess.active(accessLeases.get(socket)))) send(socket, { type: 'state', ...socket.binding.room.snapshot(socket.binding.token) });
-  }, 16);
+  }, 4);
   return { server, close() {
     if (closePromise) return closePromise;
     closing = true; stopping.abort(); clearInterval(tick); clearInterval(heartbeat);
