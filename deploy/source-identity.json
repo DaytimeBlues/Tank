@@ -1,10 +1,15 @@
 {
   "source": "8ce809e4156488af75519580abd7573a1b8b1172",
   "runtimeInventorySha256": "2e3d1067f95db2746b62781ea0cd67b9147ae2ecf6e8671767bf718e471b482e",
-  "scope": "Prebuilt Tank Home 02 browser distribution with West Farm and Redstone Quarry. The source commit identifies the base hosted runtime; the web manifest pins the server-only follow-up that checks for fixed 30 Hz steps every 4 ms instead of every 16 ms. Editable client files retained on this branch describe the prior public client.",
+  "scope": "Prebuilt TB-HOME03 client on the unchanged b2633dce hosted runtime. The editable client retained on this deploy branch is not the source of the prebuilt client. Both West Farm and Redstone Quarry remain included.",
   "prebuiltClient": {
-    "pckSha256": "bc14405a4bdb4eb5615ace42c0086ea08cce00bdb61550cc3b11f23f5b2155f1",
-    "testedCheckoutPathMapSha256": "fe6f196dff813311b26ee82f77e50854f3ce82e5bc58e552b92f33aca055d5f4",
-    "trackedAuthoringBaseline": "5dd736d4ce3060a5396433fabd8012b81ad2370b"
+    "candidateScriptSha256": {
+      "scripts/main.gd": "a6a828c07a21e80ed80775654d5bab627a4b18042b6ed0ec0bf586f9356eda2b",
+      "scripts/rangefinder_sight.gd": "865c0e6dc47c1d8dd5d3829924b60f4f31fac4e665dcd3a71d1c6148cff02de4",
+      "scripts/arena_view.gd": "6282cdc4f8755955fbde00c35913ccfaa9fef2965aadd9cddad4c70ad36279f2"
+    },
+    "pckSha256": "19d4d5a040529467c89c768050c33de9eab70cc5de244e86697d1b0aa26d0181",
+    "name": "TB-HOME03",
+    "acceptedHostedRuntime": "b2633dce7ba25d5d06a1e97be956ef9f4c1ee251"
   }
 }
