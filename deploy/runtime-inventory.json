@@ -239,6 +239,7 @@
     "scripts/watershed_skyline.gd",
     "scripts/watershed_skyline.gd.uid",
     "scripts/windmill_district.gd",
-    "scripts/windmill_district.gd.uid"
+    "scripts/windmill_district.gd.uid",
+    "backend/src/west-farm-xl.mjs"
   ]
 }
