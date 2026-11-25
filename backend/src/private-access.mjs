@@ -222,6 +222,7 @@ export function createPrivateAccess({ audience, hostKeyDigest, anonymousTest=fal
   return claims;
  }
  return Object.freeze({audience,handleHttp,startUpgrade,active,permits,issueTicket,verifyAndConsume,
+  createBlocked(request){const lease=leaseFor(request);return !!room && !!lease && (lease.host||anonymousTest);},
   roomOpened(code){room={code,generation:++roomGeneration};},
   roomClosed(code){if(room?.code===code)room=null;}});
 }

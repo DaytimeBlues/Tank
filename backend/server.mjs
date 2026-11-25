@@ -91,6 +91,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         } catch { return null; }
       }, signal);
       if (!scope) return answer(400, { error: 'Invalid ticket request' });
+      if (scope.action === 'create' && hostedAccess?.createBlocked(req)) return answer(409, { error: 'Room already open' });
       const ticket = await bounded(() => hosted.issue(req, scope, origin, signal), signal);
       return ticket ? answer(200, { ticket }) : answer(401, { error: 'Hosted ticket unavailable' });
     } catch { return answer(503, { error: 'Hosted ticket unavailable' }); }
@@ -199,6 +200,21 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         if (++messages > 80) return socket.close(1008, 'Rate limit');
         const msg = JSON.parse(raw.toString());
         if (!msg || typeof msg !== 'object') throw new Error('Invalid message');
+        if (msg.type === 'endRoom') {
+          if (Object.keys(msg).length !== 1 || !binding || !binding.room.namedRoster || binding.room.practice) throw new Error('No multiplayer room to close');
+          const { room, code, token } = binding;
+          const [id, player] = room.seat(token);
+          if (!player.connected || id !== room.hostId) throw new Error('Only the current host can end this room');
+          rooms.delete(code);
+          hostedAccess?.roomClosed(code);
+          for (const peer of wss.clients) if (peer.binding?.room === room) {
+            peer.binding = null;
+            send(peer, { type: 'roomEnded' });
+            peer.close(4001, 'Room ended');
+          }
+          room.dispose();
+          return;
+        }
         if (msg.type === 'leave') {
           if (!binding) throw new Error('Join a room first');
           binding.room.leave(binding.token);
@@ -314,7 +330,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
         if (hosted && !binding) socket.close(1000, 'Admission rejected');
       }
     });
-    socket.on('close', () => { clearInterval(rate); clearTimeout(ticketExpiry); if (binding) { try { binding.room.disconnect(binding.token); } catch {} } });
+    socket.on('close', () => { clearInterval(rate); clearTimeout(ticketExpiry); if (socket.binding && rooms.get(binding.code) === binding.room) { try { binding.room.disconnect(binding.token); } catch {} } });
   });
   let previous = performance.now(), accumulator = 0;
   const tick = setInterval(() => {
@@ -325,7 +341,7 @@ export function createGameServer({ networkMode = 'local', allowedOrigins = [], h
     while (accumulator >= 1 / 30) {
       for (const [code, room] of rooms) {
         room.step(1 / 30);
-        if (room.time > 30 && Object.keys(room.seats).length === 0) { room.dispose(); rooms.delete(code); hostedAccess?.roomClosed(code); }
+        if (Object.keys(room.seats).length === 0) { room.dispose(); rooms.delete(code); hostedAccess?.roomClosed(code); }
       }
       accumulator -= 1 / 30; steps++;
     }

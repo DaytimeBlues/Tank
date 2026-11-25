@@ -19,7 +19,7 @@
     {
       "name": "index.html",
       "bytes": 5471,
-      "sha256": "33708258777a0f0cc5dafea094ab73e7403b5fb930db723836885c943ea2aa69"
+      "sha256": "da7851e2ee5bf89b18ea71fbd5a7f5972c2a1b800036edfed95500cd760273ef"
     },
     {
       "name": "index.icon.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 13212356,
-      "sha256": "36a1de0f3121aee8b26ffa9e33ef588854e3ba8d994144a5637140d98423d35b"
+      "bytes": 13213188,
+      "sha256": "d30de7d7086fc3f91055056e4114b568c8b1fac3dd67fdcb1bfa76c4a94b01b2"
     },
     {
       "name": "index.png",
@@ -148,7 +148,7 @@
     "backend/docs/assets/original-tank/foundry/foundry.glb": "42f395aa3b57564610441b5b324338ce6b3c3707a6f4864422ae8a0ef11e3cd8",
     "backend/docs/assets/original-tank/kestrel/kestrel.glb": "289bf714306b84e0649bc575714f5cc2aaf0e9dd9ed71391b53970637a6fb46d",
     "backend/docs/assets/original-tank/palisade/palisade.glb": "ef51726711c53f8e99f6145b5350d02117faca686894db05eb29901cfd73cde3",
-    "backend/godot-assets.mjs": "0b8407a587514009a541a678f6cd95689b23e36e87501891bf2262aa4dad2b08",
+    "backend/godot-assets.mjs": "2ea5580cfc8f37ae53dd1e2ad7685b84777f3c158b9a66c1c0ea3d5c7662d4f6",
     "backend/package-lock.json": "69a1187359bdea011cff1404efba84c76b00620e00efcaa345573f85d8e7399e",
     "backend/package.json": "9b3f884ed8a24c068cef50b0673fe93bb6b6753d2f74ae32fd82c082077f1be5",
     "backend/public/battle-client.mjs": "81f6d1176fc029a2531294bbfa62050d368a01aa46c0f10df4dab88470b3f811",
@@ -178,7 +178,7 @@
     "backend/quarry/tile11.raw": "7850c2e7b8d88ebc33d15c49d845c4277026638915ee623c5770cdc21d9ac691",
     "backend/run-godot-hosted.mjs": "7e7c9e7e57bbe50f9d5e19ab13d5a8194859ccfc112da8d16b9ae9721bd04899",
     "backend/run-godot-local.mjs": "6b18fd56dde43ac9d87d828255ce84c87fa5a5063918572b137e0b541f8773af",
-    "backend/server.mjs": "079ea9f5db927db0b799d59d162547fb11beaf195bc235f4f01ddfadfa86cbbd",
+    "backend/server.mjs": "cbb1d2577e58097f18dc50d66c0f0c47e1534f053a351689ca3d24ac2496c383",
     "backend/src/battle-room.mjs": "955bf4aa3eda58f370298ef1c4cf02f149e0eea7f90b200554b685a705f051e5",
     "backend/src/battlefield-drive.mjs": "506983dd8c755af9742a93c074c9c164c9b08b748e2bfcff9a39556774756127",
     "backend/src/battlefield-map.mjs": "d00d8c52f6d6c9a324cead346c2a485a06b9c5d6e32d220414430c4c90a5a85a",
@@ -186,7 +186,7 @@
     "backend/src/grade-drive.mjs": "28c7a8830bb975fab890971af2f77328ec343f301648b25a94fc8f3bca6790dc",
     "backend/src/hosted-tickets.mjs": "ad589a6c0bc2c703cb150f8189171985d752baba6e58c8d17fcbfd7359733ed2",
     "backend/src/online-battle.mjs": "969bddab8cc35fb7c12dc2f0a0662cc5294124684124d30099d711bb50f3520a",
-    "backend/src/private-access.mjs": "5abe88572f76249388be90108bff7df858415b144785cf012c6ebfba6ba0488d",
+    "backend/src/private-access.mjs": "814da3bf170bc73cd5f576d62327a1cd9d65f6a2ae6ec3bb564264b8aeb4bde2",
     "backend/src/projectiles.mjs": "dd227b2f5037bb4bb44caa6dc1f905389c3c4c9462372824483d6c5cdffc4e5d",
     "backend/src/river-crossings.mjs": "eee06d3085038bdaa04f596b1f70d3f8143b41b8af289dd0ece1a538f326c955",
     "backend/src/roadside-cover.mjs": "2337058c121d737f7842e838953b3eda87572d6e1f393aae9709d0c0a5d45b91",

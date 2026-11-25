@@ -27,11 +27,12 @@ function browserBridge(mode,anonymousTest=false){
    (async()=>{
     if(${JSON.stringify(anonymousTest)}){
      const admission=await fetch('/access/guest',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'',cache:'no-store',mode:'same-origin',credentials:'same-origin',redirect:'error',signal:controller.signal});
+     if(admission.status===409){answer({error:'All eight browser sessions are in use. Try the original host tab.'});return null;}
      if(!admission.ok)throw Error();
     }
     return fetch('/connection-ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(scope),cache:'no-store',mode:'same-origin',credentials:'same-origin',redirect:'error',signal:controller.signal});
    })()
-    .then(async response=>{if(!response.ok)throw Error();const data=await response.json();if(typeof data.ticket!=='string'||!/^[A-Za-z0-9_-]{16,512}$/.test(data.ticket))throw Error();answer({ticket:data.ticket});})
+    .then(async response=>{if(!response)return;if(response.status===409){answer({error:'A room is already open. Rejoin it, or ask its host to end it.'});return;}if(!response.ok)throw Error();const data=await response.json();if(typeof data.ticket!=='string'||!/^[A-Za-z0-9_-]{16,512}$/.test(data.ticket))throw Error();answer({ticket:data.ticket});})
     .catch(()=>answer({error:${JSON.stringify(anonymousTest?'Test session is full or unavailable. Try again shortly.':'Access expired or unavailable. Return to Private access, then try again.')}})).finally(()=>clearTimeout(timer));
   }
  });})();`;
