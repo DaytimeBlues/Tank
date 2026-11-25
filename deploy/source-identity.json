@@ -1,15 +1,15 @@
 {
   "source": "8ce809e4156488af75519580abd7573a1b8b1172",
   "runtimeInventorySha256": "2e3d1067f95db2746b62781ea0cd67b9147ae2ecf6e8671767bf718e471b482e",
-  "scope": "Prebuilt TB-HOME03 client on the unchanged b2633dce hosted runtime. The editable client retained on this deploy branch is not the source of the prebuilt client. Both West Farm and Redstone Quarry remain included.",
+  "scope": "Prebuilt TB-HOME03 linked-aim control revision on unchanged b2633dce hosted runtime. Both West Farm and Redstone Quarry retained. Editable source in the deploy branch is not the source of this prebuilt client.",
   "prebuiltClient": {
     "candidateScriptSha256": {
-      "scripts/main.gd": "a6a828c07a21e80ed80775654d5bab627a4b18042b6ed0ec0bf586f9356eda2b",
+      "scripts/main.gd": "75e6471928dac5b85059fb46047e24f31539002be7b8847fe76e879b8d1e66f3",
       "scripts/rangefinder_sight.gd": "865c0e6dc47c1d8dd5d3829924b60f4f31fac4e665dcd3a71d1c6148cff02de4",
       "scripts/arena_view.gd": "6282cdc4f8755955fbde00c35913ccfaa9fef2965aadd9cddad4c70ad36279f2"
     },
-    "pckSha256": "19d4d5a040529467c89c768050c33de9eab70cc5de244e86697d1b0aa26d0181",
-    "name": "TB-HOME03",
+    "pckSha256": "36a1de0f3121aee8b26ffa9e33ef588854e3ba8d994144a5637140d98423d35b",
+    "name": "TB-HOME03-L",
     "acceptedHostedRuntime": "b2633dce7ba25d5d06a1e97be956ef9f4c1ee251"
   }
 }
