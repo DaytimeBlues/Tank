@@ -19,7 +19,7 @@
     {
       "name": "index.html",
       "bytes": 5471,
-      "sha256": "486e77b8c069c816e25980d182691ea6adcd0bf2042c02d321a133f62a164896"
+      "sha256": "1d2be21b4eceb1f3d5d9f856c50bbcc277560cfc3e3e99ce33b9c69928102478"
     },
     {
       "name": "index.icon.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "index.pck",
-      "bytes": 13868324,
-      "sha256": "92dec4fa8d5b00cef560cd9d43efe05971d8635a9adb082f710030911f3b1f14"
+      "bytes": 13930020,
+      "sha256": "adab51ee85dee97aba235817961cddab091d9512230f06e0c25b4b3a83e327e7"
     },
     {
       "name": "index.png",

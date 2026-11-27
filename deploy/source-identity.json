@@ -4,14 +4,14 @@
   "scope": "Prebuilt TB-WESTFARM-XL-BRIDGE-FX private candidate. Editable deploy-branch scripts are not the build input. Existing room authority/access configuration retained except exact XL world and compact-map admission module.",
   "prebuiltClient": {
     "candidateScriptSha256": {
-      "scripts/main.gd": "2353b75c94636bf049a4fc4b7aafbdbeceffa674038a70701c05de619a70c475",
+      "scripts/main.gd": "c7a82618ba8f9e827bd92af8ad8201cfbdd5183b571f132ff08241eb7f5f01a5",
       "scripts/rangefinder_sight.gd": "865c0e6dc47c1d8dd5d3829924b60f4f31fac4e665dcd3a71d1c6148cff02de4",
       "scripts/arena_view.gd": "d460ea9acfa448a2ef637ff31a99f9854e0980e191fdabbaa9d7bfc9c9d5fd64",
       "scripts/transport.gd": "5debbcd96e0841258d2769ca1369915657b8c264ec733896d1e336344afbfcef",
       "scripts/shot_effects.gd": "405ae6286a808bd3b7c2232027588880a95b029d8f4293ed49fb343794e75097"
     },
-    "pckSha256": "92dec4fa8d5b00cef560cd9d43efe05971d8635a9adb082f710030911f3b1f14",
-    "name": "TB-WESTFARM-XL-BRIDGE-FX-CREST",
+    "pckSha256": "adab51ee85dee97aba235817961cddab091d9512230f06e0c25b4b3a83e327e7",
+    "name": "TB-WESTFARM-XL-CREST-COMPACT-ENTRY",
     "acceptedHostedRuntime": "b2633dce7ba25d5d06a1e97be956ef9f4c1ee251",
     "baseline": "5d0ed1068439003f6a8d889c1d7becb49362e3ee",
     "hostedRuntimeDelta": [
@@ -25,6 +25,19 @@
       "shaderSourceSha256": "23e5bcc2fb44f99eb37d58fa0f8155708a45867b31e084fc0752156f3371266f",
       "exactMapRevision": "caec6e21f7aea9140bce4feda78a0e6ef833ed9997d69f8b8763d02de43e74b7",
       "packMemberCount": 267
+    },
+    "compactEntryDerivative": {
+      "baselineHostedCommit": "5714bf97eb63941b4a34e5ee0eed3bf734307846",
+      "baseline": "92dec4fa8d5b00cef560cd9d43efe05971d8635a9adb082f710030911f3b1f14",
+      "candidate": "adab51ee85dee97aba235817961cddab091d9512230f06e0c25b4b3a83e327e7",
+      "bytesAdded": 61696,
+      "retainedMembers": 266,
+      "changed": [
+        "scripts/main.gdc"
+      ],
+      "added": [],
+      "mapRevision": "caec6e21f7aea9140bce4feda78a0e6ef833ed9997d69f8b8763d02de43e74b7",
+      "requiresRender": true
     }
   }
 }
